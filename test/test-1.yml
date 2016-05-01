@@ -1,0 +1,35 @@
+# BAT
+
+baseUri: http://localhost:3000
+
+tests:
+  "Test 404 error":
+    GET /asjdnasjdnkasf:
+      response:
+        status: 404
+        
+  "Another tests":
+    GET /status/200:
+      response:
+        status: 200
+        body: "Success"
+        
+    GET /hello:
+      response:
+        status: 200
+        body: "Hello World!"
+
+    GET /hello?name=agus:
+      response:
+        status: 200
+        body: "Hello agus!"
+
+    GET /stream:
+      response:
+        status: 200
+        content-type: "text/plain"
+        
+    GET /responses/json:
+      response:
+        status: 200
+        body: !!map { json: true }
