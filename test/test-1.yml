@@ -14,11 +14,11 @@ tests:
   "Another":
     GET /hello?name=ERROR:
       queryParameters:
-        name: agusa
+        name: agusA
       response:
         status: 200
         body: 
-          is: "Hello agusa!"
+          is: "Hello agusA!"
           
   "Another tests":
     GET /status/200:
