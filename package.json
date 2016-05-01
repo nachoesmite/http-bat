@@ -1,18 +1,23 @@
 {
-    "name": "http-bat",
-    "dependencies": {
-        "mocha": "^2.4.5",
-        "supertest": "1.2.0",
-        "js-yaml": "3.6.0",
-        "expect": "^1.18.0",
-        "methods": "^1.1.2"
-    },
-    "devDependencies": {
-        "typescript": "1.8.10",
-        "querystring": "0.2.0",
-        "express": "4.13.4"
-    },
-    "scripts": {
-        "test": "mocha test"
-    }
+  "name": "http-bat",
+  "dependencies": {
+    "expect": "^1.18.0",
+    "js-yaml": "3.6.0",
+    "lodash": "^4.11.1",
+    "methods": "^1.1.2",
+    "mocha": "^2.4.5",
+    "qs": "^6.1.0",
+    "supertest": "1.2.0",
+    "url": "^0.11.0",
+    "yaml-include": "^1.1.0"
+  },
+  "devDependencies": {
+    "express": "4.13.4",
+    "mocha-better-spec-reporter": "^3.0.2",
+    "querystring": "0.2.0",
+    "typescript": "1.8.10"
+  },
+  "scripts": {
+    "test": "mocha --reporter spec"
+  }
 }

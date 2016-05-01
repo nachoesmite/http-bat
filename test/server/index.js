@@ -9,14 +9,14 @@ var port = process.env.PORT || 4567
 /**
  * Respond with "Success".
  */
-function successHandler (req, res) {
+function successHandler(req, res) {
   return res.send('Success')
 }
 
 /**
  * Respond with the "id" uri parameter.
  */
-function idParamHandler (req, res) {
+function idParamHandler(req, res) {
   return res.send(req.params.id)
 }
 
@@ -125,6 +125,21 @@ app.all('/responses/text', function (req, res) {
 app.all('/responses/json', function (req, res) {
   return res.send({ json: true })
 })
+
+
+var accessToken = "accessToken_" + parseInt(Math.random() * 100000);
+
+app.post('/get_access_token', function (req, res) {
+  return res.send({ new_token: accessToken })
+});
+
+app.get('/secured_by_token', function (req, res) {
+  if (req.query.accessToken != accessToken) {
+    return res.status(401).send(req.query).end();
+  } else {
+    return res.send({ success: true })
+  }
+});
 
 /**
  * Respond to url encoded endpoint.
