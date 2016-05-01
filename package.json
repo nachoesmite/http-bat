@@ -1,5 +1,12 @@
 {
   "name": "http-bat",
+  "author": {
+    "name": "Agustin Mendez",
+    "email": "agustin.mz.92@gmail.com",
+    "url": "http://menduz.com"
+  },
+  "license": "MIT",
+  "version": "0.1.0-alpha.0",
   "dependencies": {
     "expect": "^1.18.0",
     "js-yaml": "3.6.0",
@@ -12,12 +19,25 @@
     "yaml-include": "^1.1.0"
   },
   "devDependencies": {
+    "coveralls": "^2.11.9",
     "express": "4.13.4",
+    "istanbul": "^0.4.3",
     "mocha-better-spec-reporter": "^3.0.2",
+    "mocha-lcov-reporter": "^1.2.0",
     "querystring": "0.2.0",
     "typescript": "1.8.10"
   },
   "scripts": {
-    "test": "mocha --reporter spec"
-  }
+    "test": "mocha --reporter spec",
+    "coverage": "`npm bin`/istanbul cover _mocha -- -R mocha-lcov-reporter",
+    "test-travis": "npm run test && npm run coverage"
+  },
+  "repository": {
+    "url": "https://github.com/menduz/http-bat",
+    "type": "git"
+  },
+  "files": [
+    "index.js"
+  ],
+  "main": "index.js"
 }

@@ -1,4 +1,4 @@
-var bat = require('../http-bat')();
+var bat = require('../index')();
 
 var app = require('./server');
 
