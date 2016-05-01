@@ -30,13 +30,17 @@ var Bat = module.exports = function Bat() {
     });
 
     baseUri = ast.baseUri;
+  }
+  
+  function raw(yaml) {
+    ast = ymlParser.load(yaml, {
+      schema: yamlinc.YAML_INCLUDE_SCHEMA
+    });
 
-
+    baseUri = ast.baseUri;
   }
 
   function run(app) {
-    var allTests = [];
-
     var agent = request.agent(app);
 
     for (var i in ast.tests) {
@@ -58,11 +62,6 @@ var Bat = module.exports = function Bat() {
         })(ast.tests[i])
       })
     }
-
-    allTests.forEach(function (test) {
-      test();
-    })
-
   }
 }
 
