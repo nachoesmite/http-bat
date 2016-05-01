@@ -1,4 +1,4 @@
-# Http Blackbox API Tester (http-bat) [![Coverage Status](https://coveralls.io/repos/github/menduz/http-bat/badge.svg?branch=master)](https://coveralls.io/github/menduz/http-bat?branch=master) [![Build Status](https://travis-ci.org/menduz/http-bat.svg?branch=master)](https://travis-ci.org/menduz/http-bat)
+# Http Blackbox API Tester (`http-bat`) [![Coverage Status](https://coveralls.io/repos/github/menduz/http-bat/badge.svg?branch=master)](https://coveralls.io/github/menduz/http-bat?branch=master) [![Build Status](https://travis-ci.org/menduz/http-bat.svg?branch=master)](https://travis-ci.org/menduz/http-bat)
 
 It's a markup for blackbox tests. Based on YAML
 
@@ -7,7 +7,7 @@ It uses supertest and mocha to test APIs
 ## Usage
 
 ```
-$ npm install http-bat
+$ npm install http-bat --save-dev
 $ mocha
 ```
 
@@ -21,6 +21,157 @@ bat.load(__dirname + '/test-1.yml');
 
 bat.run(app);
 ```
+
+## Examples
+
+### Test response status code
+
+```yaml
+tests:
+  "Favicon must exists":
+    GET /favicon.ico:
+      response:
+        status: 200
+  "Should return 401":
+    GET /unauthorized_url:
+      response:
+        status: 401
+  "Should return 404":
+    GET /asjdnasjdnkasf:
+      response:
+        status: 404
+```
+
+### Send query string parameters
+
+```yaml
+tests:
+  "Inline query string":
+    GET /orders?page=10:
+      response:
+        status: 200
+  "Non inline":
+    GET /orders:
+      queryParameters:
+        page: 10
+      response:
+        status: 200
+  "Override inline query string":
+    # The final url will be /orders?page=10&qty=20 
+    GET /orders?page={----asd---}&qty=20:
+      queryParameters:
+        page: 10                 
+      response:
+        status: 200
+```
+
+### Validate response ´Content-Type´
+
+```yaml
+tests:
+  "Must return text":
+    GET /responses/text:
+      response:
+        content-type: text/plain  
+  "Must return json":
+    GET /responses/json:
+      response:
+        content-type: application/json
+  "Must return url-encoded":
+    GET /responses/url-encoded:
+      response:
+        content-type: application/x-www-form-urlencoded
+```
+
+### Send headers
+
+```yaml
+tests:
+  "Headers":
+    GET /profile#UNAUTHORIZED:
+      # headers:
+      #  Authorization: Bearer asfgsgh-fasdddss
+      response: 
+        # UNAUTHORIZED
+        status: 401 
+    GET /profile:
+      headers:
+        Authorization: Bearer asfgsgh-fasdddss
+      response: 
+        # OK
+        status: 200 
+```
+
+
+### Validate response headers
+
+```yaml
+tests:
+  "Headers":
+    PUT /bounce/headers:
+      response:
+        headers: 
+          Access-Control-Allow-Headers: "Authorization, X-Default-Header, X-Custom-Header" # literal value
+```
+
+### Validate response content
+
+```yaml
+tests:
+  "Must validate response body":
+    GET /text:
+      response:
+        body: 
+          content-type: text/plain
+          is: "Success"
+          # "is" means equals. In this case the response is the text "Success"
+          
+    GET /json:
+      response:
+        body: 
+          content-type: application/json
+          is: !!map { json: true }
+          # "is" means equals. In this case the response is the JSON {"json":true}
+    
+    GET /json/v1:
+      response:
+        body: 
+          content-type: application/json
+          is: 
+            json: true
+            # "is" means equals. In this case the response is the JSON {"json":true}
+            # this is the same as the previous example
+```
+
+### Validate response (partially)
+
+```yaml
+tests:
+  "Must validate response body":
+    GET /json:
+      response:
+        body: 
+          content-type: application/json
+          # In this case the response is the JSON { "json":true, "a": 1, "b": 2 }
+          matches:
+            a: 1
+          # "json" and "b" properties will be ignored
+          
+          
+    GET /users:
+      response:
+        body: 
+          content-type: application/json
+          # In this case the response is the JSON 
+          # [ 
+          #    { "id": 1, "name": "Agu" }, 
+          #    { "id": 2, "name": "Dan" } 
+          # ]
+          matches:
+            "[0].id": 1
+            "[1].name": Dan
+```
+
 
 ```yaml
 # test-1.yml
