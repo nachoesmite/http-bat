@@ -1,3 +1,4 @@
+![alt text](http://emojipedia-us.s3.amazonaws.com/cache/01/de/01de435caff4774e3ca70eb3b541e131.png "Bat")
 # Http Blackbox API Tester (`http-bat`) [![Coverage Status](https://coveralls.io/repos/github/menduz/http-bat/badge.svg?branch=master)](https://coveralls.io/github/menduz/http-bat?branch=master) [![Build Status](https://travis-ci.org/menduz/http-bat.svg?branch=master)](https://travis-ci.org/menduz/http-bat)
 
 It's a markup for blackbox tests. Based on YAML
