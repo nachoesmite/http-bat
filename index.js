@@ -31,14 +31,6 @@ var Bat = module.exports = function Bat() {
 
     baseUri = ast.baseUri;
   }
-  
-  function raw(yaml) {
-    ast = ymlParser.load(yaml, {
-      schema: yamlinc.YAML_INCLUDE_SCHEMA
-    });
-
-    baseUri = ast.baseUri;
-  }
 
   function run(app) {
     var agent = request.agent(app);
@@ -47,7 +39,7 @@ var Bat = module.exports = function Bat() {
       describe(i, function () {
         (function (tests) {
           for (var t in tests) {
-            var method = parseMethod(t);
+            var method = Bat.parseMethod(t);
 
             if (method) {
               var methodBody = tests[t];
@@ -68,7 +60,7 @@ var Bat = module.exports = function Bat() {
 
 
 
-function parseMethod(name) {
+Bat.parseMethod = function parseMethod(name) {
   var parts = name.split(/\s+/g);
   var method = null;
 
