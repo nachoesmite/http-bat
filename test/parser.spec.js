@@ -12,7 +12,7 @@ describe('correct parsing', function(){
             url: '?'
         });
     })
-    
+     
     it('parses a simple POST', function(){
         expect(parser('POST /uri')).toEqual({
             method: 'post',
@@ -38,13 +38,13 @@ describe('correct parsing', function(){
     
     it('the url must start with / or ?', function(){
         expect(function() { 
-            parser('get uri'); 
+            parser('GET uri'); 
         }).toThrow();
     });
     
     it('the url cannot end with "/" if length > 1', function(){
         expect(function() { 
-            parser('get /uri/'); 
+            parser('GET /uri/'); 
         }).toThrow();
     });
     
