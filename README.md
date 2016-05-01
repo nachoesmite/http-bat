@@ -1,4 +1,4 @@
-# Http Blackbox API Tester (http-bat) [![Coverage Status](https://coveralls.io/repos/github/menduz/html-bat/badge.svg?branch=master)](https://coveralls.io/github/menduz/html-bat?branch=master) [![Build Status](https://travis-ci.org/menduz/html-bat.svg?branch=master)](https://travis-ci.org/menduz/html-bat)
+# Http Blackbox API Tester (http-bat) [![Coverage Status](https://coveralls.io/repos/github/menduz/http-bat/badge.svg?branch=master)](https://coveralls.io/github/menduz/http-bat?branch=master) [![Build Status](https://travis-ci.org/menduz/http-bat.svg?branch=master)](https://travis-ci.org/menduz/http-bat)
 
 It's a markup for blackbox tests. Based on YAML
 
