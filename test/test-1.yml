@@ -2,8 +2,12 @@
 
 baseUri: http://localhost:3000
 
-myCustomStore: &oauth_token
-  accessToken: "EMPTY_VALUE"
+stores:
+  myCustomStore: &oauth_token
+    accessToken: "EMPTY_VALUE"
+
+env:
+  PORT: 0 #number placeholder
 
 tests:
   "Test 404 error":
@@ -85,16 +89,27 @@ tests:
         status: 200
         content-type: application/x-www-form-urlencoded
         body:
-          is: 
+          is:
             key: [ 1, 2, 3 ]
-            
+
     GET /responses/url-encoded/escaped:
       response:
         status: 200
         content-type: application/x-www-form-urlencoded
         body:
-          is: 
+          is:
             key: "Hello, world!"
+
+  "Post tests":
+    POST /post-body/json:
+      body:
+        json: &ref_value_json
+          string: "value"
+          number: 123
+      response:
+        status: 200
+        body:
+          is: *ref_value_json
   
   "Access control by token":
     GET /secured_by_token#should-be-unauthorized:

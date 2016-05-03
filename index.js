@@ -1,10 +1,11 @@
 var ymlParser = require('js-yaml');
 var fs = require('fs');
 
-var describe = require('mocha').describe;
-var pre = require('mocha').before;
-var it = require('mocha').it;
-var afterAll = require('mocha').after;
+describe = describe || require('mocha').describe;
+pre = before || require('mocha').before;
+it = it || require('mocha').it;
+afterAll = after || require('mocha').after;
+
 var request = require('supertest');
 var methods = require('methods');
 var yamlinc = require('yaml-include');
@@ -64,17 +65,16 @@ Bat.parseMethod = function parseMethod(name) {
   var parts = name.split(/\s+/g);
   var method = null;
 
-  // methods should have 2 parts
-  if (parts.length != 2) {
-    return null;
-  }
-
-
 
   method = parts[0].trim().toLowerCase();
 
   if (method.length == 0) {
     console.error("ERROR: empty method on " + name);
+    return null;
+  }
+
+  // methods should have 2 parts
+  if (parts.length != 2) {
     return null;
   }
 
@@ -131,6 +131,13 @@ function testMethod(agent, verb, url, body) {
         if (body.headers) {
           for (var h in body.headers) {
             req.set(h, body.headers[h]);
+          }
+        }
+
+        // we must send some data..
+        if (body.body) {
+          if (body.body.json) {
+            req.send(body.body.json);
           }
         }
 

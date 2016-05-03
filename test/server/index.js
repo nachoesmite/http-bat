@@ -1,10 +1,12 @@
 var fs = require('fs')
 var qs = require('querystring')
 var join = require('path').join
+var bodyParser = require('body-parser')
 var express = require('express')
 
 var app = module.exports = express()
 var port = process.env.PORT || 4567
+
 
 /**
  * Respond with "Success".
@@ -58,6 +60,14 @@ app.all('/hello', function (req, res) {
 app.all('/stream', function (req, res) {
   return fs.createReadStream(join(__dirname, 'fixtures/lorem.txt')).pipe(res)
 })
+
+/**
+ * Bounce post body
+ */
+app.post('/post-body/json', bodyParser.json(), function (req, res) {
+  console.log();
+  res.json(req.body);
+});
 
 /**
  * Create a bounce router, whose purpose is to give requests back to the user.
