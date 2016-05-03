@@ -85,6 +85,39 @@ app.post('/post-body/attach-file', busboy(), function (req, res) {
 app.post('/post-body/url', bodyParser.urlencoded(), function (req, res) {
   res.json(req.body);
 });
+app.post('/post-body/form', busboy(), function (req, res) {
+  var files = [];
+  req.busboy.on('field', function (fieldname, val, fieldnameTruncated, valTruncated, encoding, mimetype) {
+    var responseFile = {};
+
+    responseFile[fieldname] = val;
+    files.push(responseFile);
+  });
+  req.busboy.on('finish', function () {
+    res.send(files);
+  });
+  req.pipe(req.busboy)
+});
+app.post('/post-body/form-n-files', busboy(), function (req, res) {
+  var files = [];
+  req.busboy.on('file', function (fieldname, file, filename, encoding, mimetype) {
+    var responseFile = {};
+
+    responseFile[fieldname] = filename;
+    files.push(responseFile);
+    file.resume();
+  });
+  req.busboy.on('field', function (fieldname, val, fieldnameTruncated, valTruncated, encoding, mimetype) {
+    var responseFile = {};
+
+    responseFile[fieldname] = val;
+    files.push(responseFile);
+  });
+  req.busboy.on('finish', function () {
+    res.send(files);
+  });
+  req.pipe(req.busboy)
+});
 /**
  * Create a bounce router, whose purpose is to give requests back to the user.
  */

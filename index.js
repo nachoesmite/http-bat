@@ -167,6 +167,22 @@ function testMethod(agent, verb, url, body, options) {
               throw new TypeError("request.attach must be a sequence");
             }
           }
+          
+          if (body.request.form) {
+            if (!body.request['content-type'])
+              req.type('form');
+
+            if (body.request.form instanceof Array) {
+              for (var i in body.request.form) {
+                var currentAttachment = body.request.form[i];
+                for (var key in currentAttachment) {
+                  req.field(key, currentAttachment[key]);
+                }
+              }
+            } else {
+              throw new TypeError("request.form must be a sequence");
+            }
+          }
 
           if (body.request.urlencoded) {
             if (!body.request['content-type'])
