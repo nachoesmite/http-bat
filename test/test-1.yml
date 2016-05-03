@@ -102,7 +102,7 @@ tests:
 
   "Post tests":
     POST /post-body/json:
-      body:
+      request:
         json: &ref_value_json
           string: "value"
           number: 123
@@ -110,7 +110,39 @@ tests:
         status: 200
         body:
           is: *ref_value_json
-  
+    POST /post-body/attach-file:
+      request:
+        attach:
+          - file: 'server/fixtures/lorem.txt'
+      response:
+        status: 200
+        body:
+          is:
+            - file: lorem.txt
+    POST /post-body/attach-file?multiple:
+      request:
+        attach:
+          - file: 'server/fixtures/lorem.txt'
+          - file: 'server/fixtures/lorem.txt'
+          - "file-otherName": 'server/fixtures/lorem.txt'
+      response:
+        status: 200
+        body:
+          is:
+            - file: 'lorem.txt'
+            - file: 'lorem.txt'
+            - "file-otherName": 'lorem.txt'
+    POST /post-body/url:
+      request:
+        urlencoded: &form-data-1
+          - name: 'agustin'
+          - name: 'agustin'
+          - another: 123
+      response:
+        status: 200
+        body:
+          is: *form-data-1
+
   "Access control by token":
     GET /secured_by_token#should-be-unauthorized:
       queryParameters: *oauth_token # send oauth_token as queryParameters

@@ -15,29 +15,42 @@ var _ = require('lodash');
 
 var Bat = module.exports = function Bat() {
 
-  var ast = null;
-  var baseUri = null;
+  var options = {
+    baseUri: null,
+    stores: {},
+    file: null,
+    path: null,
+    ast: {
+      tests: {}
+    },
+    agent: null,
+    app: null,
+    tests: []
+  }
 
   return {
+    options: options,
     load: load,
     run: run
   }
 
-  function load(path) {
-    process.chdir(Path.dirname(path));
+  function load(file) {
+    options.path = Path.dirname(file);
+    process.chdir(options.path);
+    options.file = file;
 
-    ast = ymlParser.load(fs.readFileSync(path, 'utf8'), {
+    options.ast = ymlParser.load(fs.readFileSync(options.file, 'utf8'), {
       schema: yamlinc.YAML_INCLUDE_SCHEMA
     });
 
-    baseUri = ast.baseUri;
+    options.baseUri = options.ast.baseUri;
   }
 
   function run(app) {
-    var agent = request.agent(app);
+    options.agent = options.agent || request.agent(app);
 
-    for (var i in ast.tests) {
-      describe(i, function () {
+    for (var sequenceName in options.ast.tests) {
+      describe(sequenceName, function () {
         (function (tests) {
           for (var t in tests) {
             var method = Bat.parseMethod(t);
@@ -45,14 +58,12 @@ var Bat = module.exports = function Bat() {
             if (method) {
               var methodBody = tests[t];
 
-              testMethod(agent, method.method, method.url, methodBody).forEach(function (test) {
-
+              testMethod(options.agent, method.method, method.url, methodBody, options).forEach(function (test) {
                 test();
-
-              })
+              });
             }
           }
-        })(ast.tests[i])
+        })(options.ast.tests[sequenceName])
       })
     }
   }
@@ -103,7 +114,7 @@ Bat.parseMethod = function parseMethod(name) {
   }
 }
 
-function testMethod(agent, verb, url, body) {
+function testMethod(agent, verb, url, body, options) {
   var tests = [];
   tests.push(function () {
     return describe(verb.toUpperCase() + ' ' + url, function () {
@@ -135,9 +146,37 @@ function testMethod(agent, verb, url, body) {
         }
 
         // we must send some data..
-        if (body.body) {
-          if (body.body.json) {
-            req.send(body.body.json);
+        if (body.request) {
+          if (body.request['content-type']) {
+            req.set('Content-Type', body.request['content-type']);
+          }
+
+          if (body.request.json) {
+            req.send(body.request.json);
+          }
+
+          if (body.request.attach) {
+            if (body.request.attach instanceof Array) {
+              for (var i in body.request.attach) {
+                var currentAttachment = body.request.attach[i];
+                for (var key in currentAttachment) {
+                  req.attach(key, Path.resolve(options.path, currentAttachment[key]));
+                }
+              }
+            } else {
+              throw new TypeError("request.attach must be a sequence");
+            }
+          }
+
+          if (body.request.urlencoded) {
+            if (!body.request['content-type'])
+              req.set('Content-Type', "application/x-www-form-urlencoded");
+
+            if (body.request.urlencoded instanceof Array) {
+              req.send(body.request.urlencoded)
+            } else {
+              throw new TypeError("request.urlencoded must be a sequence");
+            }
           }
         }
 

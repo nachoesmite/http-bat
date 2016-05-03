@@ -2,6 +2,7 @@ var fs = require('fs')
 var qs = require('querystring')
 var join = require('path').join
 var bodyParser = require('body-parser')
+var busboy = require('connect-busboy')
 var express = require('express')
 
 var app = module.exports = express()
@@ -65,10 +66,25 @@ app.all('/stream', function (req, res) {
  * Bounce post body
  */
 app.post('/post-body/json', bodyParser.json(), function (req, res) {
-  console.log();
   res.json(req.body);
 });
+app.post('/post-body/attach-file', busboy(), function (req, res) {
+  var files = [];
+  req.busboy.on('file', function (fieldname, file, filename, encoding, mimetype) {
+    var responseFile = {};
 
+    responseFile[fieldname] = filename;
+    files.push(responseFile);
+    file.resume();
+  });
+  req.busboy.on('finish', function () {
+    res.send(files);
+  });
+  req.pipe(req.busboy)
+});
+app.post('/post-body/url', bodyParser.urlencoded(), function (req, res) {
+  res.json(req.body);
+});
 /**
  * Create a bounce router, whose purpose is to give requests back to the user.
  */
