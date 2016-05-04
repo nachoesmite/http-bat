@@ -82,7 +82,7 @@ app.post('/post-body/attach-file', busboy(), function (req, res) {
   });
   req.pipe(req.busboy)
 });
-app.post('/post-body/url', bodyParser.urlencoded(), function (req, res) {
+app.post('/post-body/url', bodyParser.urlencoded({ extended: true }), function (req, res) {
   res.json(req.body);
 });
 app.post('/post-body/form', busboy(), function (req, res) {

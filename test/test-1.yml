@@ -14,75 +14,95 @@ tests:
     GET /asjdnasjdnkasf:
       response:
         status: 404
-        
+
+
+
   "Another":
     GET /hello?name=ERROR:
       queryParameters:
         name: agusA
       response:
         status: 200
-        body: 
+        body:
           is: "Hello agusA!"
-          
+
+
+
   "Another tests":
     GET /status/200:
       response:
         status: 200
-        body: 
+        body:
          is: "Success"
-        
+
+
+
     GET /hello:
       response:
         status: 200
-        body: 
+        body:
           is: "Hello World!"
+
+
 
     GET /hello?name=agus:
       response:
         status: 200
-        body: 
+        body:
           is: "Hello agus!"
+
+
 
   "Headers":
     PUT /bounce/headers:
       headers:
         Authorization: test
       response:
-        headers: 
+        headers:
           Access-Control-Allow-Headers: "Authorization, X-Default-Header, X-Custom-Header"
         body:
-          matches: 
+          matches:
             authorization: test
-            
+
+
+
   "Text Response":
     GET /responses/text:
       response:
         status: 200
-        body: 
+        body:
           is: 'text'
-          
+
+
+
   "JSON Response":
     GET /responses/json:
       response:
         status: 200
-        body: 
+        body:
           is: !!map { json: true }
+
+
 
   "Regexp body":
     GET /stream:
       response:
         status: 200
-        body: 
+        body:
           is: !!js/regexp /^Lorem/
-   
+
+
+
   "Url encoded responses":
     GET /responses/url-encoded/basic:
       response:
         status: 200
         content-type: application/x-www-form-urlencoded
         body:
-          is: 
+          is:
             key: value
+
+
 
     GET /responses/url-encoded/duplicate:
       response:
@@ -92,6 +112,8 @@ tests:
           is:
             key: [ 1, 2, 3 ]
 
+
+
     GET /responses/url-encoded/escaped:
       response:
         status: 200
@@ -99,6 +121,8 @@ tests:
         body:
           is:
             key: "Hello, world!"
+
+
 
   "Post tests":
     POST /post-body/json:
@@ -110,6 +134,9 @@ tests:
         status: 200
         body:
           is: *ref_value_json
+
+
+
     POST /post-body/attach-file:
       request:
         attach:
@@ -119,6 +146,9 @@ tests:
         body:
           is:
             - file: lorem.txt
+
+
+
     POST /post-body/attach-file?multiple:
       request:
         attach:
@@ -132,6 +162,9 @@ tests:
             - file: 'lorem.txt'
             - file: 'lorem.txt'
             - "file-otherName": 'lorem.txt'
+
+
+
     POST /post-body/url:
       request:
         urlencoded: &form-data-1
@@ -142,6 +175,10 @@ tests:
         status: 200
         body:
           is: *form-data-1
+
+
+
+
     POST /post-body/form:
       request:
         form: &form-data-2
@@ -151,7 +188,12 @@ tests:
       response:
         status: 200
         body:
+          print: true
           is: *form-data-2
+
+
+
+
     POST /post-body/form-n-files:
       request:
         attach:
@@ -162,6 +204,7 @@ tests:
           - another: 123string
       response:
         status: 200
+        print: true
         body:
           is:
             - file: "lorem.txt"
@@ -174,15 +217,15 @@ tests:
       queryParameters: *oauth_token # send oauth_token as queryParameters
       response:
         status: 401
-  
-    POST /get_access_token: 
+
+    POST /get_access_token:
       # responses { new_token: "asd" }
       response:
         body:
           take: # take a value from body
             new_token: # the name or route of the value
-              accessToken: *oauth_token # into *oauth_token.accessToken 
-    
+              accessToken: *oauth_token # into *oauth_token.accessToken
+
     GET /secured_by_token:
       queryParameters: *oauth_token # send oauth_token as queryParameters
       response:
