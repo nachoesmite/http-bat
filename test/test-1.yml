@@ -23,7 +23,7 @@ tests:
         name: agusA
       response:
         status: 200
-        body: 
+        body:
           is: "Hello agusA!"
 
 
@@ -32,7 +32,7 @@ tests:
     GET /status/200:
       response:
         status: 200
-        body: 
+        body:
          is: "Success"
 
 
@@ -40,7 +40,7 @@ tests:
     GET /hello:
       response:
         status: 200
-        body: 
+        body:
           is: "Hello World!"
 
 
@@ -48,7 +48,7 @@ tests:
     GET /hello?name=agus:
       response:
         status: 200
-        body: 
+        body:
           is: "Hello agus!"
 
 
@@ -58,10 +58,10 @@ tests:
       headers:
         Authorization: test
       response:
-        headers: 
+        headers:
           Access-Control-Allow-Headers: "Authorization, X-Default-Header, X-Custom-Header"
         body:
-          matches: 
+          matches:
             authorization: test
 
 
@@ -70,7 +70,7 @@ tests:
     GET /responses/text:
       response:
         status: 200
-        body: 
+        body:
           is: 'text'
 
 
@@ -79,7 +79,7 @@ tests:
     GET /responses/json:
       response:
         status: 200
-        body: 
+        body:
           is: !!map { json: true }
 
 
@@ -88,7 +88,7 @@ tests:
     GET /stream:
       response:
         status: 200
-        body: 
+        body:
           is: !!js/regexp /^Lorem/
 
 
@@ -99,7 +99,7 @@ tests:
         status: 200
         content-type: application/x-www-form-urlencoded
         body:
-          is: 
+          is:
             key: value
 
 
@@ -187,6 +187,7 @@ tests:
       response:
         status: 200
         body:
+          print: true
           is: *form-data-2
 
 
@@ -201,6 +202,7 @@ tests:
           - another: 123string
       response:
         status: 200
+        print: true
         body:
           is:
             - file: "lorem.txt"
@@ -215,12 +217,14 @@ tests:
       response:
         status: 401
 
-    POST /get_access_token: 
+    POST /get_access_token:
+
       # responses { new_token: "asd" }
       response:
         body:
           take: # take a value from body
             new_token: !!pointer oauth.accessToken
+
 
     GET /secured_by_token:
       queryParameters: 
