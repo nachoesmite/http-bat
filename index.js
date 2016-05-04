@@ -167,7 +167,7 @@ function testMethod(agent, verb, url, body, options) {
               throw new TypeError("request.attach must be a sequence");
             }
           }
-          
+
           if (body.request.form) {
             if (!body.request['content-type'])
               req.type('form');
@@ -214,7 +214,22 @@ function testMethod(agent, verb, url, body, options) {
             req.expect(body.response.status);
           }
 
+          if (body.response.print) {
+            req.expect(function (res) {
+              console.log('/////////////////////////////');
+              console.log(verb.toUpperCase() + ' ' + url, "RESPONSE:", JSON.stringify(res, null, 2));
+              console.log('/////////////////////////////')
+            });
+          }
+
           if (body.response.body) {
+            if (body.response.body.print) {
+              req.expect(function (res) {
+                console.log('/////////////////////////////');
+                console.log(verb.toUpperCase() + ' ' + url, "BODY:", JSON.stringify(res.body, null, 2));
+                console.log('/////////////////////////////')
+              });
+            }
             if ('is' in body.response.body) {
               switch (typeof body.response.body.is) {
                 case "object":
@@ -274,7 +289,6 @@ function testMethod(agent, verb, url, body, options) {
                       take:
                         new_token:
                           accessToken: *oauth_token
-                
                 GET /secured_by_token:
                   queryParameters: *oauth_token
                   response:
@@ -282,7 +296,6 @@ function testMethod(agent, verb, url, body, options) {
                     body:
                       is:
                         success: true
-            
             */
             if (body.response.body.take) {
               for (var take in body.response.body.take) {
