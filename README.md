@@ -23,6 +23,8 @@ bat.load(__dirname + '/test-1.yml');
 bat.run(app);
 ```
 
+![Imgur](http://i.imgur.com/zoV5lH7.gif)
+
 ## Examples
 
 ### Test response status code
@@ -175,124 +177,259 @@ tests:
 
 
 ```yaml
-# test-1.yml
+# BAT
 
 baseUri: http://localhost:3000
 
-myCustomStore: &oauth_token
-  accessToken: "EMPTY_VALUE"
+stores:
+  oauth:
+    accessToken: "EMPTY_VALUE"
+  ENV:
+    NODE_ENV: FAKE_ENV
+    PORT: 0
 
 tests:
   "Test 404 error":
     GET /asjdnasjdnkasf:
       response:
         status: 404
-        
+
+
+
   "Another":
     GET /hello?name=ERROR:
       queryParameters:
-        name: agusa
+        name: agusA
       response:
         status: 200
-        body: 
-          is: "Hello agusa!"
-          
+        body:
+          is: "Hello agusA!"
+
+
+
   "Another tests":
     GET /status/200:
       response:
         status: 200
-        body: 
+        body:
          is: "Success"
-        
+
+
+
     GET /hello:
       response:
         status: 200
-        body: 
+        body:
           is: "Hello World!"
+
+
 
     GET /hello?name=agus:
       response:
         status: 200
-        body: 
+        body:
           is: "Hello agus!"
+
+
 
   "Headers":
     PUT /bounce/headers:
       headers:
         Authorization: test
       response:
-        headers: 
+        headers:
           Access-Control-Allow-Headers: "Authorization, X-Default-Header, X-Custom-Header"
         body:
-          matches: 
+          matches:
             authorization: test
-            
+
+
+
   "Text Response":
     GET /responses/text:
       response:
         status: 200
-        body: 
+        body:
           is: 'text'
-          
+
+
+
   "JSON Response":
     GET /responses/json:
       response:
         status: 200
-        body: 
+        body:
           is: !!map { json: true }
+
+
 
   "Regexp body":
     GET /stream:
       response:
         status: 200
-        body: 
+        body:
           is: !!js/regexp /^Lorem/
-   
+
+
+
   "Url encoded responses":
     GET /responses/url-encoded/basic:
       response:
         status: 200
         content-type: application/x-www-form-urlencoded
         body:
-          is: 
+          is:
             key: value
+
+
 
     GET /responses/url-encoded/duplicate:
       response:
         status: 200
         content-type: application/x-www-form-urlencoded
         body:
-          is: 
+          is:
             key: [ 1, 2, 3 ]
-            
+
+
+
     GET /responses/url-encoded/escaped:
       response:
         status: 200
         content-type: application/x-www-form-urlencoded
         body:
-          is: 
+          is:
             key: "Hello, world!"
-  
+
+
+
+  "Post tests":
+    POST /post-body/json:
+      request:
+        json: &ref_value_json
+          string: "value"
+          number: 123
+      response:
+        status: 200
+        body:
+          is: *ref_value_json
+
+
+
+    POST /post-body/attach-file:
+      request:
+        attach:
+          - file: 'server/fixtures/lorem.txt'
+      response:
+        status: 200
+        body:
+          is:
+            - file: lorem.txt
+
+
+
+    POST /post-body/attach-file?multiple:
+      request:
+        attach:
+          - file: 'server/fixtures/lorem.txt'
+          - file: 'server/fixtures/lorem.txt'
+          - "file-otherName": 'server/fixtures/lorem.txt'
+      response:
+        status: 200
+        body:
+          is:
+            - file: 'lorem.txt'
+            - file: 'lorem.txt'
+            - "file-otherName": 'lorem.txt'
+
+
+
+    POST /post-body/url:
+      request:
+        urlencoded: &form-data-1
+          - name: 'agustin'
+          - name: 'agustin'
+          - another: 123
+      response:
+        status: 200
+        body:
+          is: *form-data-1
+
+
+
+    POST /post-body/form:
+      request:
+        form: &form-data-2
+          - name: 'agustin'
+          - name: 'agustin'
+          - another: 123string
+      response:
+        status: 200
+        body:
+          print: true
+          is: *form-data-2
+
+
+
+    POST /post-body/form-n-files:
+      request:
+        attach:
+          - file: 'server/fixtures/lorem.txt'
+        form:
+          - name: 'agustin'
+          - name: 'agustin'
+          - another: 123string
+      response:
+        status: 200
+        print: true
+        body:
+          is:
+            - file: "lorem.txt"
+            - name: 'agustin'
+            - name: 'agustin'
+            - another: 123string
+
+
+
   "Access control by token":
     GET /secured_by_token#should-be-unauthorized:
-      queryParameters: *oauth_token # send oauth_token as queryParameters
+      queryParameters: 
+        accessToken: !!pointer oauth.accessToken
       response:
         status: 401
-  
-    POST /get_access_token: 
+        
+    GET /secured_by_token/header#should-be-unauthorized:
+      headers: 
+        Authorization: !!pointer oauth.accessToken
+      response:
+        status: 401
+
+
+
+    POST /get_access_token:
       # responses { new_token: "asd" }
       response:
         body:
           take: # take a value from body
-            new_token: # the name or route of the value
-              accessToken: *oauth_token # into *oauth_token.accessToken 
-    
+            new_token: !!pointer oauth.accessToken
+
+
     GET /secured_by_token:
-      queryParameters: *oauth_token # send oauth_token as queryParameters
+      queryParameters: 
+        accessToken: !!pointer oauth.accessToken
       response:
         status: 200
         body:
           is:
             success: true
 
+
+    GET /secured_by_token/header:
+      headers: 
+        Authorization: !!pointer oauth.accessToken
+      response:
+        status: 200
+        body:
+          is:
+            success: true
 ```
