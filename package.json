@@ -42,7 +42,8 @@
     "type": "git"
   },
   "files": [
-    "index.js"
+    "index.js",
+    "lib/pointer.js"
   ],
   "main": "index.js"
 }
