@@ -6,7 +6,7 @@
     "url": "http://menduz.com"
   },
   "license": "MIT",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "dependencies": {
     "expect": "^1.18.0",
     "js-yaml": "3.6.0",
