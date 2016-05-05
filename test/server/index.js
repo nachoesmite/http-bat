@@ -200,6 +200,14 @@ app.get('/secured_by_token', function (req, res) {
   }
 });
 
+app.get('/secured_by_token/header', function (req, res) {
+  if (req.headers.authorization != accessToken) {
+    return res.status(401).send(req.headers).end();
+  } else {
+    return res.send({ success: true })
+  }
+});
+
 /**
  * Respond to url encoded endpoint.
  */
