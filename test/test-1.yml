@@ -5,9 +5,9 @@ baseUri: http://localhost:3000
 stores:
   oauth:
     accessToken: "EMPTY_VALUE"
-
-env:
-  PORT: 0 #number placeholder
+  ENV:
+    NODE_ENV: FAKE_ENV
+    PORT: 0
 
 tests:
   "Test 404 error":
@@ -210,15 +210,24 @@ tests:
             - name: 'agustin'
             - another: 123string
 
+
+
   "Access control by token":
     GET /secured_by_token#should-be-unauthorized:
       queryParameters: 
         accessToken: !!pointer oauth.accessToken
       response:
         status: 401
+        
+    GET /secured_by_token/header#should-be-unauthorized:
+      headers: 
+        Authorization: !!pointer oauth.accessToken
+      response:
+        status: 401
+
+
 
     POST /get_access_token:
-
       # responses { new_token: "asd" }
       response:
         body:
@@ -229,6 +238,16 @@ tests:
     GET /secured_by_token:
       queryParameters: 
         accessToken: !!pointer oauth.accessToken
+      response:
+        status: 200
+        body:
+          is:
+            success: true
+
+
+    GET /secured_by_token/header:
+      headers: 
+        Authorization: !!pointer oauth.accessToken
       response:
         status: 200
         body:

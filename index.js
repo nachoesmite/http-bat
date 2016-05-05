@@ -44,7 +44,7 @@ var Bat = module.exports = function Bat() {
     options.ast = ymlParser.load(fs.readFileSync(options.file, 'utf8'), {
       schema: libPointer.createSchema(yamlinc.YAML_INCLUDE_SCHEMA)
     });
-    
+
     options.ast.stores = options.ast.stores || {};
 
     options.baseUri = options.ast.baseUri;
@@ -135,7 +135,7 @@ function testMethod(agent, verb, url, body, options) {
             delete parsedUrl.search;
 
           for (var i in body.queryParameters) {
-            newQs[i] = body.queryParameters[i];
+            newQs[i] = cloneObjectUsingPointers(body.queryParameters[i], options.ast.stores);
           }
         }
 
@@ -145,7 +145,7 @@ function testMethod(agent, verb, url, body, options) {
 
         if (body.headers) {
           for (var h in body.headers) {
-            req.set(h, body.headers[h]);
+            req.set(h, cloneObjectUsingPointers(body.headers[h], options.ast.stores));
           }
         }
 
@@ -156,7 +156,7 @@ function testMethod(agent, verb, url, body, options) {
           }
 
           if (body.request.json) {
-            req.send(body.request.json);
+            req.send(cloneObjectUsingPointers(body.request.json, options.ast.stores));
           }
 
           if (body.request.attach) {
@@ -180,7 +180,7 @@ function testMethod(agent, verb, url, body, options) {
               for (var i in body.request.form) {
                 var currentAttachment = body.request.form[i];
                 for (var key in currentAttachment) {
-                  req.field(key, currentAttachment[key]);
+                  req.field(key, cloneObjectUsingPointers(currentAttachment[key], options.ast.stores));
                 }
               }
             } else {
@@ -193,7 +193,7 @@ function testMethod(agent, verb, url, body, options) {
               req.set('Content-Type', "application/x-www-form-urlencoded");
 
             if (body.request.urlencoded instanceof Array) {
-              req.send(body.request.urlencoded)
+              req.send(cloneObjectUsingPointers(body.request.urlencoded, options.ast.stores))
             } else {
               throw new TypeError("request.urlencoded must be a sequence");
             }
@@ -266,7 +266,14 @@ function testMethod(agent, verb, url, body, options) {
                 (function (match, value) {
                   req.expect(function (res) {
                     var readed = _.get(res.body, match);
-                    if (typeof value == "string" && !_.isEqual(readed, value) || ((value instanceof RegExp) && !value.test(readed)))
+
+                    if (value instanceof libPointer)
+                      value = value.get(options.ast.stores);
+
+                    if (
+                      typeof value == "string" && !_.isEqual(readed, value)
+                      || ((value instanceof RegExp) && !value.test(readed))
+                    )
                       throw new Error("Unexpected response match _.get(" + JSON.stringify(match) + ") = " + JSON.stringify(_.get(res.body, match)) + " expected: " + JSON.stringify(value));
                   });
                 })(match, body.response.body.matches[match]);
@@ -306,14 +313,13 @@ function testMethod(agent, verb, url, body, options) {
                   req.expect(function (res) {
                     if (!(pointer instanceof libPointer))
                       throw new Error("body.take.* must be a pointer ex: !!pointer myValue");
-                      
+
                     var takenValue = _.get(res.body, take);
                     pointer.set(options.ast.stores, takenValue);
                   });
                 })(take, body.response.body.take[take]);
               }
             }
-
           }
 
           if (body.response.headers) {
@@ -328,4 +334,48 @@ function testMethod(agent, verb, url, body, options) {
     })
   })
   return tests;
+}
+
+function cloneObjectUsingPointers(baseObject, store) {
+  if (typeof baseObject !== "object") {
+    return baseObject;
+  }
+
+  return cloneObject(baseObject, store);
+}
+
+
+function cloneObject(obj, store) {
+  obj = obj && obj instanceof Object ? obj : '';
+
+  // Handle Date (return new Date object with old value)
+  if (obj instanceof Date) {
+    return new Date(obj);
+  }
+
+  // Handle Array (return a full slice of the array)
+  if (obj instanceof Array) {
+    return obj.slice();
+  }
+
+  if (obj instanceof libPointer) {
+    return obj.get(store);
+  }
+
+  // Handle Object
+  if (obj instanceof Object) {
+    var copy = new obj.constructor();
+    for (var attr in obj) {
+      if (obj.hasOwnProperty(attr)) {
+        if (obj[attr] instanceof Object) {
+          copy[attr] = cloneObject(obj[attr]);
+        } else {
+          copy[attr] = obj[attr];
+        }
+      }
+    }
+    return copy;
+  }
+
+  throw new Error("Unable to copy obj! Its type isn't supported.");
 }
