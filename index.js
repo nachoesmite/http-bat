@@ -60,7 +60,7 @@ var Bat = module.exports = function Bat() {
     if (typeof app === 'string' && app.substr(-1) === '/') {
       app = app.substr(0, app.length - 1);
     }
-
+    
     options.agent = options.agent || request.agent(app);
     options.ast.stores.ENV = _.extend(options.ast.stores.ENV, _.cloneDeep(process.env));
 
@@ -328,7 +328,11 @@ function testMethod(agent, verb, url, body, options) {
 
         req.end(function (err, res) {
           if (err && err instanceof Error) {
-            err = new err.constructor(err.message + "\n" + JSON.stringify(res, null, 2).replace(/^(.*)/gm, "      $1"));
+            err = new err.constructor(
+              err.message
+              + ("\nREQUEST = " + JSON.stringify(req, null, 2)).replace(/^(.*)/gm, "      $1")
+              + ("\nRESPONSE = " + JSON.stringify(res, null, 2)).replace(/^(.*)/gm, "      $1")
+            );
           }
           done(err, res);
         });
