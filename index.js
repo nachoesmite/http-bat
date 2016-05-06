@@ -23,7 +23,8 @@ var Bat = module.exports = function Bat() {
     file: null,
     path: null,
     ast: {
-      tests: {}
+      tests: {},
+      stores: {}
     },
     agent: null,
     app: null,
@@ -47,11 +48,17 @@ var Bat = module.exports = function Bat() {
 
     options.ast.stores = options.ast.stores || {};
 
+    if (!(options.ast.stores instanceof Object) || (options.ast.stores instanceof Array)) {
+      /* istanbul ignore throw: untestable */
+      throw new TypeError("stores: must be an object");
+    }
+
     options.baseUri = options.ast.baseUri;
   }
 
   function run(app) {
     options.agent = options.agent || request.agent(app);
+    options.ast.stores.ENV = _.cloneDeep(process.env);
 
     for (var sequenceName in options.ast.tests) {
       describe(sequenceName, function () {
@@ -84,7 +91,6 @@ Bat.parseMethod = function parseMethod(name) {
   method = parts[0].trim().toLowerCase();
 
   if (method.length == 0) {
-    console.error("ERROR: empty method on " + name);
     return null;
   }
 
@@ -134,8 +140,9 @@ function testMethod(agent, verb, url, body, options) {
           if ('search' in parsedUrl)
             delete parsedUrl.search;
 
-          for (var i in body.queryParameters) {
-            newQs[i] = cloneObjectUsingPointers(body.queryParameters[i], options.ast.stores);
+          var qsParams = cloneObjectUsingPointers(body.queryParameters, options.ast.stores);
+          for (var i in qsParams) {
+            newQs[i] = qsParams[i];
           }
         }
 
@@ -144,8 +151,10 @@ function testMethod(agent, verb, url, body, options) {
         var req = agent[verb](url);
 
         if (body.headers) {
-          for (var h in body.headers) {
-            req.set(h, cloneObjectUsingPointers(body.headers[h], options.ast.stores));
+          var headers = cloneObjectUsingPointers(body.headers, options.ast.stores);
+          for (var h in headers) {
+
+            req.set(h, headers[h] == undefined ? '' : headers[h].toString());
           }
         }
 
@@ -168,6 +177,7 @@ function testMethod(agent, verb, url, body, options) {
                 }
               }
             } else {
+              /* istanbul ignore throw: untestable */
               throw new TypeError("request.attach must be a sequence");
             }
           }
@@ -178,12 +188,14 @@ function testMethod(agent, verb, url, body, options) {
 
             if (body.request.form instanceof Array) {
               for (var i in body.request.form) {
-                var currentAttachment = body.request.form[i];
+                var currentAttachment = cloneObjectUsingPointers(body.request.form[i], options.ast.stores);
+
                 for (var key in currentAttachment) {
-                  req.field(key, cloneObjectUsingPointers(currentAttachment[key], options.ast.stores));
+                  req.field(key, currentAttachment[key]);
                 }
               }
             } else {
+              /* istanbul ignore throw: untestable */
               throw new TypeError("request.form must be a sequence");
             }
           }
@@ -195,6 +207,7 @@ function testMethod(agent, verb, url, body, options) {
             if (body.request.urlencoded instanceof Array) {
               req.send(cloneObjectUsingPointers(body.request.urlencoded, options.ast.stores))
             } else {
+              /* istanbul ignore throw: untestable */
               throw new TypeError("request.urlencoded must be a sequence");
             }
           }
@@ -208,6 +221,7 @@ function testMethod(agent, verb, url, body, options) {
               if (contentType.indexOf(';') != -1) {
                 contentType = contentType.substr(0, contentType.indexOf(';'))
               }
+              /* istanbul ignore if: untestable */
               if (body.response['content-type'].toLowerCase() != contentType.toLowerCase()) {
                 throw new Error("Unexpected content-type " + JSON.stringify(contentType) + " expected: " + JSON.stringify(body.response['content-type']));
               }
@@ -235,26 +249,29 @@ function testMethod(agent, verb, url, body, options) {
               });
             }
             if ('is' in body.response.body) {
-              switch (typeof body.response.body.is) {
+              var bodyEquals = cloneObjectUsingPointers(body.response.body.is, options.ast.stores);
+
+              switch (typeof bodyEquals) {
                 case "object":
-                  if (body.response.body.is == null) {
+                  if (bodyEquals == null) {
                     req.expect(function (res) {
+                      /* istanbul ignore if: untestable */
                       if (res.body != null)
                         throw new Error("Unexpected response " + JSON.stringify(res.body) + " expected: null");
                     });
                   } else {
-                    req.expect(body.response.body.is);
+                    req.expect(bodyEquals);
                   }
                   break;
 
                 case "string":
-                  req.expect(body.response.body.is);
+                  req.expect(bodyEquals);
                   break;
                 case "number":
                 case "boolean":
                   req.expect(function (res) {
-                    if (res.body != body.response.body.is)
-                      throw new Error("Unexpected response " + JSON.stringify(res.body) + " expected: " + body.response.body.is);
+                    if (res.body != bodyEquals)
+                      throw new Error("Unexpected response " + JSON.stringify(res.body) + " expected: " + bodyEquals);
                   });
                   break;
               }
@@ -262,55 +279,29 @@ function testMethod(agent, verb, url, body, options) {
 
             if (body.response.body.matches) {
 
-              for (var match in body.response.body.matches) {
+              var matches = cloneObjectUsingPointers(body.response.body.matches, options.ast.stores);
+
+              for (var match in matches) {
                 (function (match, value) {
                   req.expect(function (res) {
                     var readed = _.get(res.body, match);
-
-                    if (value instanceof libPointer)
-                      value = value.get(options.ast.stores);
-
+                    
+                    /* istanbul ignore if: untestable */
                     if (
                       typeof value == "string" && !_.isEqual(readed, value)
                       || ((value instanceof RegExp) && !value.test(readed))
                     )
                       throw new Error("Unexpected response match _.get(" + JSON.stringify(match) + ") = " + JSON.stringify(_.get(res.body, match)) + " expected: " + JSON.stringify(value));
                   });
-                })(match, body.response.body.matches[match]);
+                })(match, matches[match]);
               }
-
             }
 
-            /*
-            
-            oauth: &oauth_token
-              accessToken: "EMPTY_VALUE"
-            
-            
-            
-            tests:
-              "Access control by token":
-                POST /get_access_token: 
-                  # responses { new_token: "asd" }
-                  # Takes res.body.new_token from POST
-                  # into oauth_token.accessToken
-                  response:
-                    body:
-                      take:
-                        new_token:
-                          accessToken: *oauth_token
-                GET /secured_by_token:
-                  queryParameters: *oauth_token
-                  response:
-                    # status: 200
-                    body:
-                      is:
-                        success: true
-            */
             if (body.response.body.take) {
               for (var take in body.response.body.take) {
                 (function (match, pointer) {
                   req.expect(function (res) {
+                    /* istanbul ignore if: untestable */
                     if (!(pointer instanceof libPointer))
                       throw new Error("body.take.* must be a pointer ex: !!pointer myValue");
 
@@ -323,8 +314,10 @@ function testMethod(agent, verb, url, body, options) {
           }
 
           if (body.response.headers) {
-            for (var h in body.response.headers) {
-              req.expect(h, body.response.headers[h]);
+            var headers = cloneObjectUsingPointers(body.response.headers, options.ast.stores);
+
+            for (var h in headers) {
+              req.expect(h, headers[h].toString());
             }
           }
         }
@@ -353,6 +346,10 @@ function cloneObject(obj, store) {
     return new Date(obj);
   }
 
+  if (obj instanceof String || obj instanceof Number || obj instanceof Boolean) {
+    return obj;
+  }
+
   // Handle Array (return a full slice of the array)
   if (obj instanceof Array) {
     return obj.slice();
@@ -362,13 +359,17 @@ function cloneObject(obj, store) {
     return obj.get(store);
   }
 
+  if (obj instanceof RegExp) {
+    return obj;
+  }
+
   // Handle Object
   if (obj instanceof Object) {
     var copy = new obj.constructor();
     for (var attr in obj) {
       if (obj.hasOwnProperty(attr)) {
         if (obj[attr] instanceof Object) {
-          copy[attr] = cloneObject(obj[attr]);
+          copy[attr] = cloneObject(obj[attr], store);
         } else {
           copy[attr] = obj[attr];
         }
