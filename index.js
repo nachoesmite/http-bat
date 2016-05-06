@@ -327,10 +327,10 @@ function testMethod(agent, verb, url, body, options) {
         }
 
         req.end(function (err, res) {
-          if (err) {
-            console.log(JSON.stringify(res, null, 2))
+          if (err && err instanceof Error) {
+            err = new err.constructor(err.message + "\n" + JSON.stringify(res, null, 2).replace(/^(.*)/gm, "      $1"));
           }
-          done.apply(null, arguments);
+          done(err, res);
         });
       });
     })
