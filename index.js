@@ -47,9 +47,8 @@ var Bat = module.exports = function Bat() {
     });
 
     options.ast.stores = options.ast.stores || {};
-
+    /* istanbul ignore if: untestable */
     if (!(options.ast.stores instanceof Object) || (options.ast.stores instanceof Array)) {
-      /* istanbul ignore throw: untestable */
       throw new TypeError("stores: must be an object");
     }
 
@@ -57,6 +56,18 @@ var Bat = module.exports = function Bat() {
   }
 
   function run(app) {
+    if (!app) {
+      /* istanbul ignore if: untestable */
+      if (!options.baseUri) {
+        throw new Error("baseUri not specified");
+      }
+
+      app = options.baseUri;
+    }
+
+    if(options.baseUri && typeof options.baseUri != "string")
+      throw new Error("baseUri must be a string");
+
     options.agent = options.agent || request.agent(app);
     options.ast.stores.ENV = _.cloneDeep(process.env);
 
@@ -285,7 +296,7 @@ function testMethod(agent, verb, url, body, options) {
                 (function (match, value) {
                   req.expect(function (res) {
                     var readed = _.get(res.body, match);
-                    
+
                     /* istanbul ignore if: untestable */
                     if (
                       typeof value == "string" && !_.isEqual(readed, value)
