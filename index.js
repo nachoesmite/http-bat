@@ -57,10 +57,22 @@ var Bat = module.exports = function Bat() {
   }
 
   function run(app) {
+    if (!app) {
+      /* istanbul ignore if: untestable */
+      if (!options.baseUri) {
+        throw new Error("baseUri not specified");
+      }
+
+      app = options.baseUri;
+    }
+
+    if(options.baseUri && typeof options.baseUri != "string")
+      throw new Error("baseUri must be a string");
+
     if (typeof app === 'string' && app.substr(-1) === '/') {
       app = app.substr(0, app.length - 1);
     }
-    
+
     options.agent = options.agent || request.agent(app);
     options.ast.stores.ENV = _.extend(options.ast.stores.ENV, _.cloneDeep(process.env));
 
