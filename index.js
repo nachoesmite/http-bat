@@ -48,8 +48,8 @@ var Bat = module.exports = function Bat() {
 
     options.ast.stores = options.ast.stores || {};
 
+    /* istanbul ignore if: untestable */
     if (!(options.ast.stores instanceof Object) || (options.ast.stores instanceof Array)) {
-      /* istanbul ignore throw: untestable */
       throw new TypeError("stores: must be an object");
     }
 
@@ -57,8 +57,12 @@ var Bat = module.exports = function Bat() {
   }
 
   function run(app) {
+    if (typeof app === 'string' && app.substr(-1) === '/') {
+      app = app.substr(0, app.length - 1);
+    }
+
     options.agent = options.agent || request.agent(app);
-    options.ast.stores.ENV = _.cloneDeep(process.env);
+    options.ast.stores.ENV = _.extend(options.ast.stores.ENV, _.cloneDeep(process.env));
 
     for (var sequenceName in options.ast.tests) {
       describe(sequenceName, function () {
@@ -285,7 +289,7 @@ function testMethod(agent, verb, url, body, options) {
                 (function (match, value) {
                   req.expect(function (res) {
                     var readed = _.get(res.body, match);
-                    
+
                     /* istanbul ignore if: untestable */
                     if (
                       typeof value == "string" && !_.isEqual(readed, value)
@@ -322,7 +326,12 @@ function testMethod(agent, verb, url, body, options) {
           }
         }
 
-        req.end(done);
+        req.end(function (err, res) {
+          if (err) {
+            console.log(JSON.stringify(res, null, 2))
+          }
+          done.apply(null, arguments);
+        });
       });
     })
   })
