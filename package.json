@@ -46,10 +46,11 @@
   "files": [
     "index.js",
     "lib/pointer.js",
-    "bin/http-bat.js"
+    "bin/http-bat.js",
+    "bin/genericSpec.js"
   ],
   "main": "index.js",
   "bin": {
-    "http-bat": "bin/http-bin.js"
+    "http-bat": "bin/http-bat.js"
   }
 }
