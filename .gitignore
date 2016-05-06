@@ -39,17 +39,5 @@ node_modules
 # Sublime
 terminal.glue
 
-
-typings/browser.d.ts
-typings/browser/**
-
-**/*.ts.base
-
 *.pem
 *.zip
-
-config/*.js
-config/**/*.js
-src/**/*.js
-*.js
-src/*.js
