@@ -232,7 +232,7 @@ tests:
       response:
         body:
           take: # take a value from body
-            new_token: !!pointer oauth.accessToken
+            - new_token: !!pointer oauth.accessToken
 
 
     GET /secured_by_token:
@@ -248,6 +248,20 @@ tests:
     GET /secured_by_token/header:
       headers: 
         Authorization: !!pointer oauth.accessToken
+      response:
+        status: 200
+        body:
+          is:
+            success: true
+
+    POST /get_access_token#whole:
+      response:
+        body:
+          take: !!pointer new_auth
+
+    GET /secured_by_token/header#new_token:
+      headers: 
+        Authorization: !!pointer new_auth.new_token
       response:
         status: 200
         body:

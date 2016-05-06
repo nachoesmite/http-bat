@@ -66,7 +66,7 @@ var Bat = module.exports = function Bat() {
       app = options.baseUri;
     }
 
-    if(options.baseUri && typeof options.baseUri != "string")
+    if (options.baseUri && typeof options.baseUri != "string")
       throw new Error("baseUri must be a string");
 
     if (typeof app === 'string' && app.substr(-1) === '/') {
@@ -314,17 +314,26 @@ function testMethod(agent, verb, url, body, options) {
             }
 
             if (body.response.body.take) {
-              for (var take in body.response.body.take) {
-                (function (match, pointer) {
-                  req.expect(function (res) {
-                    /* istanbul ignore if: untestable */
-                    if (!(pointer instanceof libPointer))
-                      throw new Error("body.take.* must be a pointer ex: !!pointer myValue");
+              var take = body.response.body.take;
+              if (take instanceof Array) {
+                take.forEach(function (takenElement) {
+                  for (var i in takenElement) {
+                    req.expect(function (res) {
+                      /* istanbul ignore if: untestable */
+                      if (!(takenElement[i] instanceof libPointer))
+                        throw new Error("body.take.* must be a pointer ex: !!pointer myValue");
 
-                    var takenValue = _.get(res.body, take);
-                    pointer.set(options.ast.stores, takenValue);
-                  });
-                })(take, body.response.body.take[take]);
+                      var takenValue = _.get(res.body, i);
+                      takenElement[i].set(options.ast.stores, takenValue);
+                    });
+                  }
+                })
+              } else if (take instanceof libPointer) {
+                req.expect(function (res) {
+                  take.set(options.ast.stores, res.body);
+                });
+              } else {
+                throw new Error("body.take must be a sequence or !!pointer");
               }
             }
           }
