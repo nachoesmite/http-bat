@@ -1,5 +1,5 @@
 ![alt text](http://emojipedia-us.s3.amazonaws.com/cache/01/de/01de435caff4774e3ca70eb3b541e131.png "Bat")
-# Http Blackbox API Tester (`http-bat`) [![Coverage Status](https://coveralls.io/repos/github/menduz/http-bat/badge.svg?branch=master)](https://coveralls.io/github/menduz/http-bat?branch=master) [![Build Status](https://travis-ci.org/menduz/http-bat.svg?branch=master)](https://travis-ci.org/menduz/http-bat)
+# Http Blackbox API Tester (`http-bat`) [![Coverage Status](https://coveralls.io/repos/github/mulesoft-labs/http-bat/badge.svg?branch=develop)](https://coveralls.io/github/mulesoft-labs/http-bat?branch=develop) [![Build Status](https://travis-ci.org/mulesoft-labs/http-bat.svg?branch=develop)](https://travis-ci.org/mulesoft-labs/http-bat)
 
 It's a markup for blackbox tests. Based on YAML
 
@@ -7,20 +7,36 @@ It uses supertest and mocha to test APIs
 
 ## Usage
 
+### Using command line
+
+```
+$ npm install http-bat -g
+$ http-bat google-apis/*.spec.yml --url https://api.google.com
+```
+
+### Using node test.spec.js files
+
 ```
 $ npm install http-bat --save-dev
-$ mocha
 ```
 
-```javascript
-// test1.spec.js
-var bat = require('http-bat')();
+Create a spec file
 
-var app = require('../app'); //express server
+```javascript
+
+const bat = require('http-bat')();
+
+const app = require('../app'); //express server
 
 bat.load(__dirname + '/test-1.yml');
-
 bat.run(app);
+
+```
+
+Execute mocha on your project
+
+```
+$ mocha
 ```
 
 ![Imgur](http://i.imgur.com/zoV5lH7.gif)
