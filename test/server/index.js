@@ -235,6 +235,27 @@ app.all('/responses/url-encoded/escaped', function (req, res) {
   return res.send(qs.stringify({ key: 'Hello, world!' }))
 })
 
+
+var users = [
+  { id: 0, name: "Agustin" },
+  { id: 1, name: "Nicolas" }
+]
+
+app.get('/users', function (req, res) {
+  return res.json(users);
+})
+
+app.get('/users/:id', function (req, res) {
+  var user = users[req.params.id];
+
+  if (user)
+    return res.json(user);
+
+  return res.status(404);
+});
+
+
+
 /**
  * Listen to a port if the module wasn't required.
  */

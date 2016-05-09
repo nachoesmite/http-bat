@@ -28,14 +28,22 @@ tests:
 
 
 
-  "Another tests":
+  "Another tests 1":
     GET /status/200:
       response:
         status: 200
         body:
          is: "Success"
 
-
+    POST /status/{status}:
+      uriParameters:
+        status: 200
+      request:
+        content-type: application/json
+      response:
+        status: 200
+        body:
+         is: "Success"
 
     GET /hello:
       response:
@@ -214,13 +222,13 @@ tests:
 
   "Access control by token":
     GET /secured_by_token#should-be-unauthorized:
-      queryParameters: 
+      queryParameters:
         accessToken: !!pointer oauth.accessToken
       response:
         status: 401
-        
+
     GET /secured_by_token/header#should-be-unauthorized:
-      headers: 
+      headers:
         Authorization: !!pointer oauth.accessToken
       response:
         status: 401
@@ -236,7 +244,7 @@ tests:
 
 
     GET /secured_by_token:
-      queryParameters: 
+      queryParameters:
         accessToken: !!pointer oauth.accessToken
       response:
         status: 200
@@ -246,7 +254,7 @@ tests:
 
 
     GET /secured_by_token/header:
-      headers: 
+      headers:
         Authorization: !!pointer oauth.accessToken
       response:
         status: 200
@@ -260,10 +268,54 @@ tests:
           take: !!pointer new_auth
 
     GET /secured_by_token/header#new_token:
-      headers: 
+      headers:
         Authorization: !!pointer new_auth.new_token
       response:
         status: 200
         body:
           is:
             success: true
+
+  "Uri parameters":
+    GET /users:
+      response:
+        status: 200
+        body:
+          take:
+            - "[1]": !!pointer second_user
+          matches:
+            "[0].id": !!js/regexp ([0-9]+)
+
+
+
+    GET /users/{id}:
+      description: Get an user by ID
+      uriParameters:
+        id: !!pointer second_user.id
+      response:
+        status: 200
+        body:
+          matches:
+            id: !!pointer second_user.id
+            name: !!pointer second_user.name
+
+
+
+    GET /users#FirstUserThisTime:
+      response:
+        status: 200
+        body:
+          take:
+            - "[0]": !!pointer first_user
+
+
+
+    GET /users/{user_id}:
+      uriParameters:
+        user_id: !!pointer first_user.id
+      response:
+        status: 200
+        body:
+          matches:
+            id: !!pointer first_user.id
+            name: !!pointer first_user.name

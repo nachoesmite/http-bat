@@ -144,13 +144,44 @@ function testMethod(agent, verb, url, body, options) {
   var tests = [];
   tests.push(function () {
     return describe(verb.toUpperCase() + ' ' + url, function () {
-      it(verb, function (done) {
 
+      if (body.uriParameters) {
+        it('Ensure uriParameters', function () {
+          for (var i in body.uriParameters) {
+            var value = null;
+
+            if (body.uriParameters[i] instanceof libPointer) {
+              value = body.uriParameters[i].get(options.ast.stores);
+            } else {
+              value = body.uriParameters[i];
+            }
+
+            var typeOfValue = typeof value;
+
+            /* istanbul ignore if */
+            if (typeOfValue != 'string' && typeOfValue != 'number') {
+              throw new TypeError("Only strings and numbers are allowed on uriParameters. " + i + "=" + JSON.stringify(value));
+            }
+
+            url = url.replace(new RegExp("{" + i + "}", "g"), function (fulltext, match) {
+              return encodeURIComponent(value);
+            });
+          }
+        })
+      }
+
+      it(body.description || (verb.toUpperCase() + ' ' + url), function (done) {
         var parsedUrl = Url.parse(url, true);
 
         parsedUrl.query = parsedUrl.query || {};
 
         var newQs = parsedUrl.query;
+
+        if (body.timeout) {
+          if (typeof body.timeout != "number" || body.timeout <= 0)
+            throw new TypeError("timeout must be a number > 0");
+          this.timeout(body.timeout)
+        }
 
         if (body.queryParameters) {
           if ('search' in parsedUrl)
@@ -185,6 +216,7 @@ function testMethod(agent, verb, url, body, options) {
           }
 
           if (body.request.attach) {
+            /* istanbul ignore else */
             if (body.request.attach instanceof Array) {
               for (var i in body.request.attach) {
                 var currentAttachment = body.request.attach[i];
@@ -193,7 +225,6 @@ function testMethod(agent, verb, url, body, options) {
                 }
               }
             } else {
-              /* istanbul ignore throw: untestable */
               throw new TypeError("request.attach must be a sequence");
             }
           }
@@ -202,6 +233,7 @@ function testMethod(agent, verb, url, body, options) {
             if (!body.request['content-type'])
               req.type('form');
 
+            /* istanbul ignore else */
             if (body.request.form instanceof Array) {
               for (var i in body.request.form) {
                 var currentAttachment = cloneObjectUsingPointers(body.request.form[i], options.ast.stores);
@@ -211,7 +243,6 @@ function testMethod(agent, verb, url, body, options) {
                 }
               }
             } else {
-              /* istanbul ignore throw: untestable */
               throw new TypeError("request.form must be a sequence");
             }
           }
@@ -220,10 +251,10 @@ function testMethod(agent, verb, url, body, options) {
             if (!body.request['content-type'])
               req.set('Content-Type', "application/x-www-form-urlencoded");
 
+            /* istanbul ignore else */
             if (body.request.urlencoded instanceof Array) {
               req.send(cloneObjectUsingPointers(body.request.urlencoded, options.ast.stores))
             } else {
-              /* istanbul ignore throw: untestable */
               throw new TypeError("request.urlencoded must be a sequence");
             }
           }
@@ -304,10 +335,15 @@ function testMethod(agent, verb, url, body, options) {
 
                     /* istanbul ignore if: untestable */
                     if (
-                      typeof value == "string" && !_.isEqual(readed, value)
-                      || ((value instanceof RegExp) && !value.test(readed))
-                    )
-                      throw new Error("Unexpected response match _.get(" + JSON.stringify(match) + ") = " + JSON.stringify(_.get(res.body, match)) + " expected: " + JSON.stringify(value));
+                      (!(value instanceof RegExp) && !_.isEqual(readed, value))
+                      ||
+                      ((value instanceof RegExp) && !value.test(readed))
+                    ) {
+                      if (value instanceof RegExp)
+                        value = value.toString();
+
+                      throw new Error("Unexpected response match _.get(" + JSON.stringify(match) + ") = " + JSON.stringify(readed) + " expected: " + JSON.stringify(value));
+                    }
                   });
                 })(match, matches[match]);
               }
@@ -328,13 +364,15 @@ function testMethod(agent, verb, url, body, options) {
                     });
                   }
                 })
-              } else if (take instanceof libPointer) {
-                req.expect(function (res) {
-                  take.set(options.ast.stores, res.body);
-                });
-              } else {
-                throw new Error("body.take must be a sequence or !!pointer");
-              }
+              } else
+                /* istanbul ignore else */
+                if (take instanceof libPointer) {
+                  req.expect(function (res) {
+                    take.set(options.ast.stores, res.body);
+                  });
+                } else {
+                  throw new Error("body.take must be a sequence of pointers or a !!pointer");
+                }
             }
           }
 
