@@ -11,7 +11,7 @@ It uses supertest and mocha to test APIs
 
 ```
 $ npm install http-bat -g
-$ http-bat google-apis/*.spec.yml --url https://api.google.com
+$ http-bat google-apis/*.spec.yml --uri https://api.google.com
 ```
 
 ### Using node test.spec.js files
