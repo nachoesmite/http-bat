@@ -41,6 +41,10 @@ $ mocha
 
 ![Imgur](http://i.imgur.com/zoV5lH7.gif)
 
+## Demo project
+
+[http-bat-demo](https://github.com/menduz/http-bat-demo)
+
 ## Examples
 
 ### Test response status code
