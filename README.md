@@ -7,23 +7,23 @@ It uses supertest and mocha to test APIs
 
 ## Usage
 
-### Using command line
+### Option 1) Using command line, usefull for CI
 
 ```
 $ npm install http-bat -g
 $ http-bat google-apis/*.spec.yml --uri https://api.google.com
 ```
 
-### Using node test.spec.js files
+### Option 2) Using node test.spec.js files and `mocha` command
 
+Install the package
 ```
 $ npm install http-bat --save-dev
 ```
 
-Create a spec file
+#### Local express instance
 
 ```javascript
-
 const bat = require('http-bat')();
 
 const app = require('../app'); //express server
@@ -33,7 +33,17 @@ bat.run(app);
 
 ```
 
-Execute mocha on your project
+#### Remote server
+
+```javascript
+
+const bat = require('http-bat')();
+bat.load(__dirname + '/test-1.yml');
+bat.run('https://remote-host/api');
+
+```
+
+### Execute mocha on your project
 
 ```
 $ mocha
