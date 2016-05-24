@@ -205,6 +205,125 @@ tests:
             "[1].name": Dan
 ```
 
+## Execute in sequence. Obtain access token
+
+```yaml
+
+stores: # anything can be stored here
+  oauth:
+    accessToken: "INVALID_TOKEN"
+
+tests:
+  "Access control by token, executed in sequence":
+    GET /secured_by_token#should-be-unauthorized:
+      description: Must be unauthorized
+      queryParameters: 
+        accessToken: !!pointer oauth.accessToken
+      response:
+        status: 401
+
+    POST /get_access_token:
+      # the server responds { new_token: "asd" }
+      description: Obtain access token
+      response:
+        body:
+          take: # take "new_token" from response body
+            new_token: !!pointer oauth.accessToken
+
+    GET /secured_by_token:
+      description: Now the status must be 200 OK
+      queryParameters: 
+        # use the access token obtained previously
+        accessToken: !!pointer oauth.accessToken
+      response:
+        status: 200
+        body:
+          is:
+            success: true
+```
+
+## CRUD
+
+> This example shows how to create an asset, check that it exists, put new content on it and delete it. Then check 404 for the same asset.  
+Also shows how use ENVIRONMENTS variables. ENV variables are stored on stores.ENV, can be accessed using `!!pointer ENV.*`
+
+```yaml
+stores:
+  ENV:
+    csToken: Bearer <<YOU MUST DEFINE YOUR csToken ON ENV>>
+    organizationId: abc123
+  flow:
+    id: ""
+
+tests:
+  "Project create and delete":
+    POST /organizations/{orgId}/projects#create'first:
+      description: Create project
+      uriParameters:
+        orgId: !!pointer ENV.organizationId
+      headers:
+        Authorization: !!pointer ENV.csToken
+      request:
+        json:
+          name: RetrieveEmployeeFlow,
+          created: 06-06-06
+          updated: 06-06-06
+          environmentId: asd1f65dasf656
+          organizationId: !!pointer ENV.organizationId
+      response:
+        status: 201
+        body:
+          # store the whole response (project) in projectNuevo
+          take: !!pointer projectNuevo
+
+    GET /organizations/{orgId}/projects/{projectId}:
+      description: Check that the created project exists
+      uriParameters:
+        orgId: !!pointer ENV.organizationId
+        projectId: !!pointer projectNuevo.id
+      headers:
+        Authorization: !!pointer ENV.csToken
+      response:
+        status: 200
+        body:
+          matches:
+            id: !!pointer projectNuevo.id
+
+    PUT /organizations/{orgId}/projects/{projectId}:
+      uriParameters:
+        orgId: !!pointer ENV.organizationId
+        projectId: !!pointer projectNuevo.id
+      headers:
+        Authorization: !!pointer ENV.csToken
+      request:
+        json: !!pointer projectNuevo
+      response:
+       status: 200
+        body:
+          matches:
+            id: !!pointer projectNuevo.id
+
+    DELETE /organizations/{orgId}/projects/{projectId}:
+      uriParameters:
+        orgId: !!pointer ENV.organizationId
+        projectId: !!pointer projectNuevo.id
+      headers:
+        Authorization: !!pointer ENV.csToken
+      response:
+        status: 200
+
+    GET /organizations/{orgId}/projects/{projectId}#mustn't exists:
+      uriParameters:
+        orgId: !!pointer ENV.organizationId
+        projectId: !!pointer projectNuevo.id
+      headers:
+        Authorization: !!pointer ENV.csToken
+      response:
+        status: 404
+
+```
+
+# Full example (all features)
 
 ```yaml
 # BAT
