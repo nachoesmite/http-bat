@@ -1,0 +1,8 @@
+tests:
+  "Test mocha context http-bat":
+    GET /:
+      timeout: 10000
+      description: Request GET https://github.com 
+      response:
+        headers:
+          connection: !!variable connectionHeader

@@ -31,6 +31,41 @@ var Bat = module.exports = function Bat() {
     tests: []
   }
 
+  var gotContextTrigger = null;
+
+  var gotContext = new Promise(function (_ok, _err) {
+    gotContextTrigger = _ok;
+  });
+
+  describe('Checking mocha context', function () {
+    gotContextTrigger(this.ctx);
+  });
+
+  // check for context configurations
+  gotContext.then(function (ctx) {
+    var runnable = false;
+
+    if (ctx) {
+      if (ctx.batFile) {
+        load(ctx.batFile);
+        runnable = true;
+      }
+
+      if (ctx.baseUri) {
+        options.baseUri = ctx.baseUri;
+      }
+
+      if (ctx.variables) {
+        options.stores = options.stores || {};
+        _.merge(options.stores, ctx.variables);
+      }
+
+      if (runnable == true) {
+        run();
+      }
+    }
+  });
+
   return {
     options: options,
     load: load,
@@ -46,24 +81,24 @@ var Bat = module.exports = function Bat() {
       schema: libPointer.createSchema(yamlinc.YAML_INCLUDE_SCHEMA)
     });
 
-    options.ast.stores = options.ast.stores || {};
-
-    /* istanbul ignore if: untestable */
-    if (!(options.ast.stores instanceof Object) || (options.ast.stores instanceof Array)) {
-      throw new TypeError("stores: must be an object");
-    }
+    options.stores = options.ast.variables || options.ast.stores || {};
 
     options.baseUri = options.ast.baseUri;
   }
 
   function run(app) {
-    if (!app) {
+    if (!app || app === "default" || app === '') {
       /* istanbul ignore if: untestable */
       if (!options.baseUri) {
         throw new Error("baseUri not specified");
       }
 
       app = options.baseUri;
+    }
+
+    /* istanbul ignore if: untestable */
+    if (!(options.stores instanceof Object) || (options.stores instanceof Array)) {
+      throw new TypeError("stores: must be an object");
     }
 
     if (options.baseUri && typeof options.baseUri != "string")
@@ -74,7 +109,7 @@ var Bat = module.exports = function Bat() {
     }
 
     options.agent = options.agent || request.agent(app);
-    options.ast.stores.ENV = _.extend(options.ast.stores.ENV, _.cloneDeep(process.env));
+    options.stores.ENV = _.extend(options.stores.ENV, _.cloneDeep(process.env));
 
     for (var sequenceName in options.ast.tests) {
       describe(sequenceName, function () {
@@ -151,7 +186,7 @@ function testMethod(agent, verb, url, body, options) {
             var value = null;
 
             if (body.uriParameters[i] instanceof libPointer) {
-              value = body.uriParameters[i].get(options.ast.stores);
+              value = body.uriParameters[i].get(options.stores);
             } else {
               value = body.uriParameters[i];
             }
@@ -178,6 +213,7 @@ function testMethod(agent, verb, url, body, options) {
         var newQs = parsedUrl.query;
 
         if (body.timeout) {
+          /* istanbul ignore if: untestable */
           if (typeof body.timeout != "number" || body.timeout <= 0)
             throw new TypeError("timeout must be a number > 0");
           this.timeout(body.timeout)
@@ -187,7 +223,7 @@ function testMethod(agent, verb, url, body, options) {
           if ('search' in parsedUrl)
             delete parsedUrl.search;
 
-          var qsParams = cloneObjectUsingPointers(body.queryParameters, options.ast.stores);
+          var qsParams = cloneObjectUsingPointers(body.queryParameters, options.stores);
           for (var i in qsParams) {
             newQs[i] = qsParams[i];
           }
@@ -198,7 +234,7 @@ function testMethod(agent, verb, url, body, options) {
         var req = agent[verb](url);
 
         if (body.headers) {
-          var headers = cloneObjectUsingPointers(body.headers, options.ast.stores);
+          var headers = cloneObjectUsingPointers(body.headers, options.stores);
           for (var h in headers) {
 
             req.set(h, headers[h] == undefined ? '' : headers[h].toString());
@@ -212,7 +248,7 @@ function testMethod(agent, verb, url, body, options) {
           }
 
           if (body.request.json) {
-            req.send(cloneObjectUsingPointers(body.request.json, options.ast.stores));
+            req.send(cloneObjectUsingPointers(body.request.json, options.stores));
           }
 
           if (body.request.attach) {
@@ -236,7 +272,7 @@ function testMethod(agent, verb, url, body, options) {
             /* istanbul ignore else */
             if (body.request.form instanceof Array) {
               for (var i in body.request.form) {
-                var currentAttachment = cloneObjectUsingPointers(body.request.form[i], options.ast.stores);
+                var currentAttachment = cloneObjectUsingPointers(body.request.form[i], options.stores);
 
                 for (var key in currentAttachment) {
                   req.field(key, currentAttachment[key]);
@@ -253,7 +289,7 @@ function testMethod(agent, verb, url, body, options) {
 
             /* istanbul ignore else */
             if (body.request.urlencoded instanceof Array) {
-              req.send(cloneObjectUsingPointers(body.request.urlencoded, options.ast.stores))
+              req.send(cloneObjectUsingPointers(body.request.urlencoded, options.stores))
             } else {
               throw new TypeError("request.urlencoded must be a sequence");
             }
@@ -296,7 +332,7 @@ function testMethod(agent, verb, url, body, options) {
               });
             }
             if ('is' in body.response.body) {
-              var bodyEquals = cloneObjectUsingPointers(body.response.body.is, options.ast.stores);
+              var bodyEquals = cloneObjectUsingPointers(body.response.body.is, options.stores);
 
               switch (typeof bodyEquals) {
                 case "object":
@@ -326,7 +362,7 @@ function testMethod(agent, verb, url, body, options) {
 
             if (body.response.body.matches) {
 
-              var matches = cloneObjectUsingPointers(body.response.body.matches, options.ast.stores);
+              var matches = cloneObjectUsingPointers(body.response.body.matches, options.stores);
 
               for (var match in matches) {
                 (function (match, value) {
@@ -360,7 +396,7 @@ function testMethod(agent, verb, url, body, options) {
                         throw new Error("body.take.* must be a pointer ex: !!pointer myValue");
 
                       var takenValue = _.get(res.body, i);
-                      takenElement[i].set(options.ast.stores, takenValue);
+                      takenElement[i].set(options.stores, takenValue);
                     });
                   }
                 })
@@ -368,7 +404,7 @@ function testMethod(agent, verb, url, body, options) {
                 /* istanbul ignore else */
                 if (take instanceof libPointer) {
                   req.expect(function (res) {
-                    take.set(options.ast.stores, res.body);
+                    take.set(options.stores, res.body);
                   });
                 } else {
                   throw new Error("body.take must be a sequence of pointers or a !!pointer");
@@ -377,7 +413,7 @@ function testMethod(agent, verb, url, body, options) {
           }
 
           if (body.response.headers) {
-            var headers = cloneObjectUsingPointers(body.response.headers, options.ast.stores);
+            var headers = cloneObjectUsingPointers(body.response.headers, options.stores);
 
             for (var h in headers) {
               req.expect(h, headers[h].toString());
@@ -386,6 +422,7 @@ function testMethod(agent, verb, url, body, options) {
         }
 
         req.end(function (err, res) {
+          /* istanbul ignore if: untestable */
           if (err && err instanceof Error) {
             err = new err.constructor(
               err.message

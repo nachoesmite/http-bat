@@ -76,7 +76,6 @@ mochaArgv.push(specPath);
 
 function executeTest() {
   if (executionQueue.length == 0) {
-    console.log("http-bat: All tests passed");
     process.exit(0);
     return;
   }

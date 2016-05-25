@@ -1,0 +1,11 @@
+baseUri: https://www.google.com
+
+variables:
+  connectionHeader: close
+
+tests:
+  "Test response":
+    GET /:
+      response:
+        headers:
+          connection: !!variable connectionHeader

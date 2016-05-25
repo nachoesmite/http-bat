@@ -18,7 +18,7 @@
 		{
 			"taskName": "test",
 			"args": ["run", "test-travis"],
-			"isTestCommand": true
+			"isBuildCommand": true
 		}
 	]
 }

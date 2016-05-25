@@ -34,7 +34,7 @@
   "scripts": {
     "test": "mocha --reporter spec",
     "coverage": "`npm bin`/istanbul cover _mocha -- -R mocha-lcov-reporter",
-    "test-travis": "npm run test && npm run coverage",
+    "test-travis": "npm run test && node bin/http-bat.js test/cli.spec.yml && npm run coverage",
     "preversion": "npm test",
     "version": "echo VERSION",
     "postversion": "git push && git push --tags"
