@@ -44,8 +44,10 @@ var Bat = module.exports = function Bat() {
   // check for context configurations
   gotContext.then(function (ctx) {
     var runnable = false;
-
+    
     if (ctx) {
+      ctx = ctx.config || ctx;
+      
       if (ctx.batFile) {
         load(ctx.batFile);
         runnable = true;
