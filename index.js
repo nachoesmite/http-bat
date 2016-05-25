@@ -49,6 +49,9 @@ var Bat = module.exports = function Bat() {
       if (ctx.batFile) {
         load(ctx.batFile);
         runnable = true;
+      } else if (ctx.rawBat) {
+        raw(ctx.rawBat);
+        runnable = true;
       }
 
       if (ctx.baseUri) {
@@ -69,7 +72,8 @@ var Bat = module.exports = function Bat() {
   return {
     options: options,
     load: load,
-    run: run
+    run: run,
+    raw: raw
   }
 
   function load(file) {
@@ -77,13 +81,17 @@ var Bat = module.exports = function Bat() {
     process.chdir(options.path);
     options.file = file;
 
-    options.ast = ymlParser.load(fs.readFileSync(options.file, 'utf8'), {
-      schema: libPointer.createSchema(yamlinc.YAML_INCLUDE_SCHEMA)
+    raw(fs.readFileSync(options.file, 'utf8'));
+  }
+
+  function raw(content) {
+    options.ast = ymlParser.load(content, {
+      schema: libPointer.createSchema(/*yamlinc.YAML_INCLUDE_SCHEMA*/)
     });
 
     options.stores = options.ast.variables || options.ast.stores || {};
 
-    options.baseUri = options.ast.baseUri;
+    options.baseUri = options.ast.baseUri || options.baseUri;
   }
 
   function run(app) {
@@ -252,6 +260,11 @@ function testMethod(agent, verb, url, body, options) {
           }
 
           if (body.request.attach) {
+            /* istanbul ignore if */
+            if (!options.path) {
+              throw new TypeError("attach is not allowed using RAW definitions");
+            }
+
             /* istanbul ignore else */
             if (body.request.attach instanceof Array) {
               for (var i in body.request.attach) {
