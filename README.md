@@ -55,7 +55,18 @@ $ mocha
 
 [http-bat-demo](https://github.com/menduz/http-bat-demo)
 
+## Current features
+
+You can read the entire list on [this page](https://github.com/mulesoft-labs/http-bat/wiki/Features)
+
 ## Examples
+
+### Wiki examples
+
+- [Full CRUD](https://github.com/mulesoft-labs/http-bat/wiki/Examples:-CRUD)
+- [Obtain and use access tokens](https://github.com/mulesoft-labs/http-bat/wiki/Examples:-Obtain-access-token)
+- [Travis CI for APIs](https://github.com/mulesoft-labs/http-bat/wiki/Examples:-Travis-CI-for-APIs)
+- [Unsing environment variables](https://github.com/mulesoft-labs/http-bat/wiki/Examples:-Using-environment-variables-&-Login), e.g. storing credentials.
 
 ### Test response status code
 
