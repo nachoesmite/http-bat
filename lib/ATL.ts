@@ -4,6 +4,7 @@ import ATLHelpers = require('./ATLHelpers');
 import _ = require('lodash');
 import RAML = require('raml-1-parser');
 
+import path = require('path');
 
 if (typeof Promise != 'function')
   require('es6-promise').polyfill();
@@ -148,7 +149,7 @@ export class ATL {
         this.raml = RAML.loadApiSync(object.raml, { rejectOnErrors: true });
       } catch (e) {
         if (e.parserErrors) {
-          e.message = e.message + "\n" + e.parserErrors.map(x => "  " + x.message + " line " + x.line).join("\n");
+          throw path.resolve(object.raml) + ':\n' + e.message + "\n" + e.parserErrors.map(x => "  " + x.message + " line " + x.line).join("\n");
         } else {
           console.log(util.inspect(e));
         }

@@ -47,44 +47,42 @@ var mocha = new Mocha({
   useColors: true
 });
 
-glob(files, {
-  nodir: true
-}, function (er, files) {
-  if (er) {
-    console.error(er);
-    process.exit(1);
-  }
-
-  if (!files.length) {
-    console.error("http-bat: No file matching " + JSON.stringify(files));
-    process.exit(1);
-  }
-
-  var instances = [];
-
-  files.forEach(function (file) {
-    file = path.resolve(file);
-    mocha.suite.emit('pre-require', global, file, mocha);
-
-    mocha.suite.emit('require', (function (file, uri) {
-      var instance = new Bat({
-        baseUri: uri,
-        file: file
-      });
-
-      instance.run()
-
-      instances.push(instance);
-    })(file, uri), file, mocha);
-
-    mocha.suite.emit('post-require', global, file, mocha);
-  });
-
-
-  var runner = mocha.run();
-
-  runner.on('end', function () {
-    var coverageFile = path.resolve(cwd, 'coverage/lcov.info');
-    instances.forEach(function(x){ x.writeCoverage(coverageFile) });
-  })
+var foundFiles = glob.sync(files, {
+  nodir: true,
+  cwd: cwd,
+  realpath: true,
+  stat: true
 });
+
+if (!foundFiles.length) {
+  console.error("http-bat: No file matching " + JSON.stringify(files));
+  process.exit(1);
+}
+
+var instances = [];
+
+foundFiles.forEach(function (file) {
+
+  file = path.resolve(file);
+  mocha.suite.emit('pre-require', global, file, mocha);
+
+  mocha.suite.emit('require', (function (file, uri) {
+    var instance = new Bat({
+      baseUri: uri,
+      file: file
+    });
+
+    instance.run()
+
+    instances.push(instance);
+  })(file, uri), file, mocha);
+
+  mocha.suite.emit('post-require', global, file, mocha);
+});
+
+var runner = mocha.run();
+
+runner.on('end', function () {
+  var coverageFile = path.resolve(cwd, 'coverage/lcov.info');
+  instances.forEach(function (x) { x.writeCoverage(coverageFile) });
+})
