@@ -6,7 +6,7 @@
     "url": "https://www.mulesoft.com"
   },
   "license": "MIT",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "dependencies": {
     "es6-promise": "^3.2.1",
     "expect": "^1.18.0",
