@@ -4,7 +4,6 @@ import path = require('path');
 import url = require('url');
 import util = require('util');
 
-
 // NPM
 import jsYaml = require('js-yaml');
 import _ = require('lodash');

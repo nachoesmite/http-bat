@@ -47,10 +47,13 @@
     "type": "git"
   },
   "files": [
-    "index.js",
-    "lib/pointer.js",
+    "lib/ATL.js",
+    "lib/ATLHelpers.js",
+    "lib/Coverage.js",
+    "lib/bat.js",
+    "lib/Pointer.js",
     "bin/http-bat.js",
-    "bin/genericSpec.js"
+    "lib/RAMLCoverageReporter.js"
   ],
   "main": "lib/bat.js",
   "bin": {
