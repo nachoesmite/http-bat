@@ -3,9 +3,14 @@ baseUri: https://www.google.com
 variables:
   connectionHeader: close
 
+options:
+  selfSignedCert: true
+
 tests:
-  "Test response":
+  "Named test suite":
     GET /:
+      description: Named TesT!
+      id: 123
       response:
         headers:
           connection: !!variable connectionHeader

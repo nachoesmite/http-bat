@@ -1,4 +1,4 @@
-var expect = require('expect')
+/*var expect = require('expect')
 var parser = require('../').parseMethod;
 
 describe('correct parsing', function () {
@@ -53,4 +53,4 @@ describe('correct parsing', function () {
 
         expect(parser('')).toEqual(null);
     });
-})
+})*/

@@ -1,0 +1,19 @@
+/url:
+  type: methods
+  description: Bounce the URL of API requests back to the user.
+/body:
+  type: methods
+  description: Bounce the body of API requests back to the user.
+/headers:
+  put:
+    headers:
+      Authorization:
+        type: string
+    responses:
+      200:
+        headers:
+          Access-Control-Allow-Headers:
+            type: string
+  description: Bounce the headers of the API request back to the user.
+/parameter/{variable}:
+  type: methods

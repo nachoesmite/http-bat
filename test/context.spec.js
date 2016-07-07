@@ -1,5 +1,4 @@
 var expect = require('expect')
-var parser = require('../').parseMethod;
 
 var theContext = null;
 
@@ -13,7 +12,7 @@ describe('context must be stored', function () {
     it('stores the context', function () {
         theContext = this.ctx;
     });
-    
+
     ok(this.ctx);
 });
 

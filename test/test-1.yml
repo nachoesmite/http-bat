@@ -1,6 +1,7 @@
 # BAT
 
-baseUri: http://localhost:3000
+baseUri: http://localhost:4567
+raml: server/fixtures/example.raml
 
 stores:
   oauth:
@@ -8,6 +9,11 @@ stores:
   ENV:
     NODE_ENV: FAKE_ENV
     PORT: 0
+
+options:
+  selfSignedCert: true
+  raml:
+    coverage: false
 
 tests:
   "Test 404 error":
@@ -19,6 +25,7 @@ tests:
 
   "Another":
     GET /hello?name=ERROR:
+      description: Override query parameters
       queryParameters:
         name: agusA
       response:
@@ -70,7 +77,8 @@ tests:
           Access-Control-Allow-Headers: "Authorization, X-Default-Header, X-Custom-Header"
         body:
           matches:
-            authorization: test
+            - authorization: test
+        status: 200
 
 
 
@@ -118,7 +126,7 @@ tests:
         content-type: application/x-www-form-urlencoded
         body:
           is:
-            key: [ 1, 2, 3 ]
+            key: [ "1", "2", "3" ]
 
 
 
@@ -178,7 +186,7 @@ tests:
         urlencoded: &form-data-1
           - name: 'agustin'
           - name: 'agustin'
-          - another: 123
+          - another: "123"
       response:
         status: 200
         body:
@@ -223,13 +231,13 @@ tests:
   "Access control by token":
     GET /secured_by_token#should-be-unauthorized:
       queryParameters:
-        accessToken: !!pointer oauth.accessToken
+        accessToken: !!variable oauth.accessToken
       response:
         status: 401
 
     GET /secured_by_token/header#should-be-unauthorized:
       headers:
-        Authorization: !!pointer oauth.accessToken
+        Authorization: !!variable oauth.accessToken
       response:
         status: 401
 
@@ -240,12 +248,12 @@ tests:
       response:
         body:
           take: # take a value from body
-            - new_token: !!pointer oauth.accessToken
+            - new_token: !!variable oauth.accessToken
 
 
     GET /secured_by_token:
       queryParameters:
-        accessToken: !!pointer oauth.accessToken
+        accessToken: !!variable oauth.accessToken
       response:
         status: 200
         body:
@@ -255,7 +263,7 @@ tests:
 
     GET /secured_by_token/header:
       headers:
-        Authorization: !!pointer oauth.accessToken
+        Authorization: !!variable oauth.accessToken
       response:
         status: 200
         body:
@@ -265,11 +273,11 @@ tests:
     POST /get_access_token#whole:
       response:
         body:
-          take: !!pointer new_auth
+          take: !!variable new_auth
 
     GET /secured_by_token/header#new_token:
       headers:
-        Authorization: !!pointer new_auth.new_token
+        Authorization: !!variable new_auth.new_token
       response:
         status: 200
         body:
@@ -282,22 +290,22 @@ tests:
         status: 200
         body:
           take:
-            - "[1]": !!pointer second_user
+            - "[1]": !!variable second_user
           matches:
-            "[0].id": !!js/regexp ([0-9]+)
+            - "[0].id": !!js/regexp ([0-9]+)
 
 
 
     GET /users/{id}:
       description: Get an user by ID
       uriParameters:
-        id: !!pointer second_user.id
+        id: !!variable second_user.id
       response:
         status: 200
         body:
           matches:
-            id: !!pointer second_user.id
-            name: !!pointer second_user.name
+            - id: !!variable second_user.id
+            - name: !!variable second_user.name
 
 
 
@@ -306,16 +314,49 @@ tests:
         status: 200
         body:
           take:
-            - "[0]": !!pointer first_user
-
-
+            - "[0]": !!variable first_user
 
     GET /users/{user_id}:
       uriParameters:
-        user_id: !!pointer first_user.id
+        user_id: !!variable first_user.id
       response:
         status: 200
         body:
           matches:
-            id: !!pointer first_user.id
-            name: !!pointer first_user.name
+            - id: !!variable first_user.id
+            - name: !!variable first_user.name
+
+  "Testing RAML urls":
+    GET /parameters/prefix/one123:
+      response:
+        status: 200
+
+    GET /defaults/parameter/{variable}:
+      uriParameters:
+        variable: 123
+      response:
+        status: 200
+
+    GET /parameters/prefix/three123123asda123:
+      response:
+        status: 200
+
+    GET /conflicts/media-type.json:
+      response:
+        status: 200
+
+    GET /extensions/media-type/enum.xml:
+      response:
+        status: 200
+
+    GET /extensions/media-type/enum-period.xml:
+      response:
+        status: 200
+
+    GET /extensions/media-type/enum-period.json:
+      response:
+        status: 200
+
+    GET /conflicts/media-type/route:
+      response:
+        status: 200

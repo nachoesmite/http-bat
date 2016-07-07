@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-var spawn = require('child_process').spawn;
 var path = require('path')
 var fs = require('fs')
 var joinPath = require('path').join
@@ -8,6 +7,9 @@ var dirname = require('path').dirname
 var resolve = require('path').resolve
 var glob = require('glob')
 var _ = require('lodash')
+var Mocha = require('mocha');
+
+var Bat = require('../lib/bat').Bat;
 
 var pkg = require('../package.json')
 
@@ -27,8 +29,9 @@ if (uri) {
   console.info("http-bat: Default endpoint setted to " + uri);
 }
 
-var executionQueue = [];
-var mochaArgv = [];
+if (!files) {
+  files = '**/*.yml';
+}
 
 var checkpointReached = false;
 for (var i in process.argv) {
@@ -39,11 +42,10 @@ for (var i in process.argv) {
   }
 }
 
-if (mochaArgv.length == 0) {
-  mochaArgv.push('-R');
-  mochaArgv.push('spec');
-  mochaArgv.push('--bail');
-}
+var mocha = new Mocha({
+  bail: true,
+  useColors: true
+});
 
 glob(files, {
   nodir: true
@@ -58,50 +60,31 @@ glob(files, {
     process.exit(1);
   }
 
-  for (var fileIndex in files) {
-    var file = files[fileIndex];
-    executionQueue.push({
-      file: resolve(cwd, file),
-      uri: uri
-    })
-  }
+  var instances = [];
 
-  executeTest();
+  files.forEach(function (file) {
+    file = path.resolve(file);
+    mocha.suite.emit('pre-require', global, file, mocha);
+
+    mocha.suite.emit('require', (function (file, uri) {
+      var instance = new Bat({
+        baseUri: uri,
+        file: file
+      });
+
+      instance.run()
+
+      instances.push(instance);
+    })(file, uri), file, mocha);
+
+    mocha.suite.emit('post-require', global, file, mocha);
+  });
+
+
+  var runner = mocha.run();
+
+  runner.on('end', function () {
+    var coverageFile = path.resolve(cwd, 'coverage/lcov.info');
+    instances.forEach(function(x){ x.writeCoverage(coverageFile) });
+  })
 });
-
-
-var mochaBin = joinPath(require.resolve('mocha'), '..', 'bin', 'mocha');
-var specPath = require.resolve('./genericSpec');
-mochaArgv.push(specPath);
-
-function executeTest() {
-  if (executionQueue.length == 0) {
-    process.exit(0);
-    return;
-  }
-
-  var test = executionQueue.shift();
-  var env = _.extend(_.cloneDeep(process.env), {
-    HTTP_BAT_FILENAME: test.file,
-    HTTP_BAT_URI: test.uri
-  });
-
-  console.log("http-bat: Running test file " + test.file);
-
-  var child = spawn(mochaBin, mochaArgv, {
-    detached: false,
-    stdio: [process.stdin, process.stdout, process.stderr],
-    env: env,
-    cwd: cwd
-  });
-
-  child.on('close', function (code) {
-    if (code !== 0) {
-      console.error("http-bat: ERROR! Test on file " + test.file + " failed!")
-      process.exit(code);
-      return;
-    }
-    executeTest();
-    console.log("closed", code);
-  });
-}

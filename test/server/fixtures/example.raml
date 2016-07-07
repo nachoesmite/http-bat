@@ -53,6 +53,9 @@ traits:
         name:
           type: string
           default: World
+        a:
+          type: integer
+          required: false
   - helloWorld:
       responses:
         200:
@@ -65,13 +68,17 @@ resourceTypes:
   - methods:
       description: Implements all RESTful request verbs.
       get:
-      put:
-      post:
-      patch:
-      delete:
+  - testQP:
+      description: Implements query parameters
+      get:
+        queryParameters:
+          count:
+            type: integer
+            required: false
 
 # Handle the root resource.
 /:
+  type: testQP
   get:
     is: [ success ]
     description: |
@@ -104,48 +111,24 @@ resourceTypes:
     description: |
       Responds to a POST request by bouncing the request body back to the
       user, using the status code given on the path.
-  put:
-    is: [ success ]
-    description: |
-      Responds to a PUT request by bouncing the request body back to the
-      user, using the status code given on the path.
-  patch:
-    is: [ success ]
-    description: |
-      Responds to a PATCH request by bouncing the request body back to the
-      user, using the status code given on the path.
-  delete:
-    is: [ success ]
-    description: |
-      Responds to a DELETE request by bouncing the request body back to the
-      user, using the status code given on the path.
 
 # Say hello.
 /hello:
   get:
-    is: [ name, helloWorld ]
-  put:
-    is: [ name, helloWorld ]
-  post:
-    is: [ name, helloWorld ]
-  patch:
-    is: [ name, helloWorld ]
-  delete:
+    queryParameters:
+      name:
+        type: string
     is: [ name, helloWorld ]
 
 # Bounce request parameters.
-/bounce:
-  /url:
-    type: methods
-    description: Bounce the URL of API requests back to the user.
-  /body:
-    type: methods
-    description: Bounce the body of API requests back to the user.
-  /headers:
-    type: methods
-    description: Bounce the headers of the API request back to the user.
-  /parameter/{variable}:
-    type: methods
+/bounce: !include included.yml
+
+
+/a:
+  /{a}:
+    /b:
+      /{b}:
+        get:
 
 # Set defaults.
 /defaults:
@@ -206,6 +189,24 @@ resourceTypes:
     type: methods
   /json:
     type: methods
+    get:
+      responses:
+        200:
+          body:
+            application/json:
+              schema: |
+                {
+                  "$schema": "http://json-schema.org/draft-04/schema#",
+                  "type": "object",
+                  "properties": {
+                    "json": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "json"
+                  ]
+                }
   /url-encoded:
     /basic:
       type: methods

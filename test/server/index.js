@@ -59,6 +59,7 @@ app.all('/hello', function (req, res) {
  * Stream a file back to the user.
  */
 app.all('/stream', function (req, res) {
+  res.header('content-type', 'text/html');
   return fs.createReadStream(join(__dirname, 'fixtures/lorem.txt')).pipe(res)
 })
 
@@ -83,7 +84,12 @@ app.post('/post-body/attach-file', busboy(), function (req, res) {
   req.pipe(req.busboy)
 });
 app.post('/post-body/url', bodyParser.urlencoded({ extended: true }), function (req, res) {
-  res.json(req.body);
+  var ret = [];
+
+  for (var i in req.body) {
+    ret.push(req.body[i]);
+  }
+  res.json(ret);
 });
 app.post('/post-body/form', busboy(), function (req, res) {
   var files = [];
@@ -140,6 +146,8 @@ var bounce = new express.Router()
       'Access-Control-Allow-Headers',
       'Authorization, X-Default-Header, X-Custom-Header'
     )
+
+    
 
     return res.send(req.headers)
   })

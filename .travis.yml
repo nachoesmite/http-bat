@@ -1,6 +1,16 @@
 language: node_js
 node_js:
- - "0.12"
-script: "npm run-script test-travis"
-# Send coverage data to Coveralls
-after_script: "cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js"
+- '0.12'
+- '4'
+- '6'
+script: npm run-script test-travis
+after_script: cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js
+deploy:
+  provider: npm
+  email: agustin.mz.92@gmail.com
+  skip_cleanup: true
+  api_key:
+    secure: n0o7/YtexH0NPlf3R3ERXzs55qzjD1SxH/L5GsgRBJIIzgQn1hbTFgYsLRQT4gXcBxNNgaTQILYnl9SW1B82k7b/qMHUZOg75X6Ji9NDO/IMl1whwjOSVFf0ARC4/TbtxBjQwFGgQ2Alq7zgvCfjYTPlZt1ALNXvOFzhgRRMF78jEnoz+hibrQxy1Emc19mOKkxjQvqEG0d8ESURAUm29LS9pPT45LMt+vTHSxqmnpu0fTI0RN86d7kRSAR+XKgLekjSUqHxKkPW5C7Z4nOKcrno5BrrDHy/F5OI/zboIXVEppdruU3ezaNR0Xqm1Q4jA0TLtf+Gs5UrJvxHk+jczsT60rDwyEQ/x/qro6KgI13UeGUCi9x44ZvBNRbXUk0y9wxq0yyL+9t9tL1epZ6pcx2BiGAjrz+pzaYqDdb37lSvnV3/FNz42gqE7KImktrM6svI3IqyRLig8FDRdPAWKyVvRzCP97PFbRL89ywBURAFIB4BNK2bqBw8WQU+hK3J3OTcDSvLO3s0GLUYVl3IlU6HCXD0/q+lDxZel+TToxAy2vs83psJTbcyWP7g9Tc0U53xvWLmFizlS6vv8psPMr4fCjsn7oKfaKUNQn9/8Y63wV8dGHgSnpKKZ+Fk/nC0DRYTEsnrsBzak+7+2u99Y0Kqg09S2yFNYMmcOLCqzg8=
+  on:
+    tags: true
+    repo: mulesoft-labs/http-bat

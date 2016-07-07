@@ -1,7 +1,12 @@
-var bat = require('../index')();
-
 var app = require('./server');
+var Bat = require('../lib/bat').Bat;
 
-bat.load(__dirname + '/test-1.yml');
+var instance = new Bat({
+  file: __dirname + '/test-1.yml'
+});
 
-bat.run(app);
+instance.run(app);
+
+after(function () {
+  instance.writeCoverage('../coverage/lcov.info');
+});
