@@ -82,7 +82,21 @@ foundFiles.forEach(function (file) {
 
 var runner = mocha.run();
 
-runner.on('end', function () {
+var failureCount = 0;
+var passCount = 0;
+
+runner.on('pass', function () {
+  ++passCount;
+});
+
+runner.on('fail', function () {
+  ++failureCount;
+});
+
+runner.on('end', function (failures) {
   var coverageFile = path.resolve(cwd, 'coverage/lcov.info');
   instances.forEach(function (x) { x.writeCoverage(coverageFile) });
+
+  if (failureCount)
+    process.exit(1);
 })
