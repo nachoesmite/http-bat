@@ -178,7 +178,7 @@ export class Bat {
 
   private ensureRamlCoverage() {
     if (this.ast.raml) {
-      this.describe("RAML Coverage", (done) => {
+      this.describe("RAML Coverage", () => {
         this.it('Wait the results before start', done => {
           Promise.all(this.coverageElements.map(item => item.run()))
             .then(() => done())
@@ -244,7 +244,7 @@ export class Bat {
     let that = this;
 
     if (suite.suites && Object.keys(suite.suites).length) {
-      execFn(suite.name, function (mochaSuite) {
+      execFn(suite.name, function () {
         for (let k in suite.suites) {
           let s = suite.suites[k];
           that.runSuite(s);
