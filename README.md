@@ -1,45 +1,42 @@
 ![alt text](http://emojipedia-us.s3.amazonaws.com/cache/01/de/01de435caff4774e3ca70eb3b541e131.png "Bat")
 # Http Blackbox API Tester (`http-bat`) [![Coverage Status](https://coveralls.io/repos/github/mulesoft-labs/http-bat/badge.svg?branch=develop)](https://coveralls.io/github/mulesoft-labs/http-bat?branch=develop) [![Build Status](https://travis-ci.org/mulesoft-labs/http-bat.svg?branch=develop)](https://travis-ci.org/mulesoft-labs/http-bat)
 
-It's a markup for blackbox tests. Based on YAML
-
-It uses supertest and mocha to test APIs
+Describe your platform independient API tests using [ATL (Api Testing Language)](https://github.com/mulesoft-labs/http-bat/wiki/ATL-SPEC--(Api-Testing-Language)) and run them using `http-bat`. It also generate [coverage reports for your RAML files](https://coveralls.io/builds/6914230/source?filename=test%2Fserver%2Ffixtures%2Fexample.raml).
 
 ## Usage
 
-### Option 1) Using command line, usefull for CI
+### Using command line, usefull for CI
 
+Install the tool using `npm install http-bat -g`
+
+Run your tests on `api` folder:
 ```
-$ npm install http-bat -g
-$ http-bat google-apis/*.spec.yml --uri https://api.google.com
+$ http-bat api/*.spec.yml
 ```
 
-### Option 2) Using node test.spec.js files and `mocha` command
+Run your tests with a custom remote URI:
+```
+$ http-bat github_api/*.spec.yml --uri http://api.github.com
+```
+
+### You need it embeded on a Node project? (Useful for coverage and CI)
 
 Install the package
 ```
 $ npm install http-bat --save-dev
 ```
 
-#### Local express instance
+> `test/api.spec.js` <- mocha spec
 
 ```javascript
-const bat = require('http-bat')();
+const lib = require('http-bat');
 
 const app = require('../app'); //express server
 
+const bat = new lib.Bat();
+
 bat.load(__dirname + '/test-1.yml');
-bat.run(app);
-
-```
-
-#### Remote server
-
-```javascript
-
-const bat = require('http-bat')();
-bat.load(__dirname + '/test-1.yml');
-bat.run('https://remote-host/api');
+bat.run(app /* you could provide an URL too */);
 
 ```
 
@@ -66,7 +63,8 @@ You can read the entire list on [this page](https://github.com/mulesoft-labs/htt
 - [Full CRUD](https://github.com/mulesoft-labs/http-bat/wiki/Examples:-CRUD)
 - [Obtain and use access tokens](https://github.com/mulesoft-labs/http-bat/wiki/Examples:-Obtain-access-token)
 - [Travis CI for APIs](https://github.com/mulesoft-labs/http-bat/wiki/Examples:-Travis-CI-for-APIs)
-- [Unsing environment variables](https://github.com/mulesoft-labs/http-bat/wiki/Examples:-Using-environment-variables-&-Login), e.g. storing credentials.
+- [Travis CI for APIs (With RAML coverage)](https://github.com/mulesoft-labs/http-bat/wiki/Examples:-RAML-Coverage)
+- [Using environment variables](https://github.com/mulesoft-labs/http-bat/wiki/Examples:-Using-environment-variables-&-Login), e.g. storing credentials.
 
 ### Test response status code
 
@@ -133,16 +131,13 @@ tests:
 tests:
   "Headers":
     GET /profile#UNAUTHORIZED:
-      # headers:
-      #  Authorization: Bearer asfgsgh-fasdddss
       response: 
-        # UNAUTHORIZED
         status: 401 
+        
     GET /profile:
       headers:
         Authorization: Bearer asfgsgh-fasdddss
       response: 
-        # OK
         status: 200 
 ```
 
@@ -198,7 +193,7 @@ tests:
           content-type: application/json
           # In this case the response is the JSON { "json":true, "a": 1, "b": 2 }
           matches:
-            a: 1
+            - a: 1
           # "json" and "b" properties will be ignored
           
           
@@ -212,8 +207,8 @@ tests:
           #    { "id": 2, "name": "Dan" } 
           # ]
           matches:
-            "[0].id": 1
-            "[1].name": Dan
+            - "[0].id": 1
+            - "[1].name": Dan
 ```
 
 ## Execute in sequence. Obtain access token
@@ -229,7 +224,7 @@ tests:
     GET /secured_by_token#should-be-unauthorized:
       description: Must be unauthorized
       queryParameters: 
-        accessToken: !!pointer oauth.accessToken
+        accessToken: !!variable oauth.accessToken
       response:
         status: 401
 
@@ -239,13 +234,13 @@ tests:
       response:
         body:
           take: # take "new_token" from response body
-            new_token: !!pointer oauth.accessToken
+            - new_token: !!variable oauth.accessToken
 
     GET /secured_by_token:
       description: Now the status must be 200 OK
       queryParameters: 
         # use the access token obtained previously
-        accessToken: !!pointer oauth.accessToken
+        accessToken: !!variable oauth.accessToken
       response:
         status: 200
         body:
@@ -256,10 +251,10 @@ tests:
 ## CRUD
 
 > This example shows how to create an asset, check that it exists, put new content on it and delete it. Then check 404 for the same asset.  
-Also shows how use ENVIRONMENTS variables. ENV variables are stored on stores.ENV, can be accessed using `!!pointer ENV.*`
+Also shows how use ENVIRONMENTS variables. ENV variables are stored on variables.ENV, can be accessed using `!!variable ENV.*`
 
 ```yaml
-stores:
+variables:
   ENV:
     csToken: Bearer <<YOU MUST DEFINE YOUR csToken ON ENV>>
     organizationId: abc123
@@ -271,325 +266,65 @@ tests:
     POST /organizations/{orgId}/projects#create'first:
       description: Create project
       uriParameters:
-        orgId: !!pointer ENV.organizationId
+        orgId: !!variable ENV.organizationId
       headers:
-        Authorization: !!pointer ENV.csToken
+        Authorization: !!variable ENV.csToken
       request:
         json:
           name: RetrieveEmployeeFlow,
           created: 06-06-06
           updated: 06-06-06
           environmentId: asd1f65dasf656
-          organizationId: !!pointer ENV.organizationId
+          organizationId: !!variable ENV.organizationId
       response:
         status: 201
         body:
           # store the whole response (project) in projectNuevo
-          take: !!pointer projectNuevo
+          take: !!variable projectNuevo
 
     GET /organizations/{orgId}/projects/{projectId}:
       description: Check that the created project exists
       uriParameters:
-        orgId: !!pointer ENV.organizationId
-        projectId: !!pointer projectNuevo.id
+        orgId: !!variable ENV.organizationId
+        projectId: !!variable projectNuevo.id
       headers:
-        Authorization: !!pointer ENV.csToken
+        Authorization: !!variable ENV.csToken
       response:
         status: 200
         body:
           matches:
-            id: !!pointer projectNuevo.id
+            id: !!variable projectNuevo.id
 
     PUT /organizations/{orgId}/projects/{projectId}:
       uriParameters:
-        orgId: !!pointer ENV.organizationId
-        projectId: !!pointer projectNuevo.id
+        orgId: !!variable ENV.organizationId
+        projectId: !!variable projectNuevo.id
       headers:
-        Authorization: !!pointer ENV.csToken
+        Authorization: !!variable ENV.csToken
       request:
-        json: !!pointer projectNuevo
+        json: !!variable projectNuevo
       response:
        status: 200
         body:
           matches:
-            id: !!pointer projectNuevo.id
+            id: !!variable projectNuevo.id
 
     DELETE /organizations/{orgId}/projects/{projectId}:
       uriParameters:
-        orgId: !!pointer ENV.organizationId
-        projectId: !!pointer projectNuevo.id
+        orgId: !!variable ENV.organizationId
+        projectId: !!variable projectNuevo.id
       headers:
-        Authorization: !!pointer ENV.csToken
+        Authorization: !!variable ENV.csToken
       response:
         status: 200
 
     GET /organizations/{orgId}/projects/{projectId}#mustn't exists:
       uriParameters:
-        orgId: !!pointer ENV.organizationId
-        projectId: !!pointer projectNuevo.id
+        orgId: !!variable ENV.organizationId
+        projectId: !!variable projectNuevo.id
       headers:
-        Authorization: !!pointer ENV.csToken
+        Authorization: !!variable ENV.csToken
       response:
         status: 404
 
-```
-
-# Full example (all features)
-
-```yaml
-# BAT
-
-baseUri: http://localhost:3000
-
-stores:
-  oauth:
-    accessToken: "EMPTY_VALUE"
-  ENV:
-    NODE_ENV: FAKE_ENV
-    PORT: 0
-
-tests:
-  "Test 404 error":
-    GET /asjdnasjdnkasf:
-      response:
-        status: 404
-
-
-
-  "Another":
-    GET /hello?name=ERROR:
-      queryParameters:
-        name: agusA
-      response:
-        status: 200
-        body:
-          is: "Hello agusA!"
-
-
-
-  "Another tests":
-    GET /status/200:
-      response:
-        status: 200
-        body:
-         is: "Success"
-
-
-
-    GET /hello:
-      response:
-        status: 200
-        body:
-          is: "Hello World!"
-
-
-
-    GET /hello?name=agus:
-      response:
-        status: 200
-        body:
-          is: "Hello agus!"
-
-
-
-  "Headers":
-    PUT /bounce/headers:
-      headers:
-        Authorization: test
-      response:
-        headers:
-          Access-Control-Allow-Headers: "Authorization, X-Default-Header, X-Custom-Header"
-        body:
-          matches:
-            authorization: test
-
-
-
-  "Text Response":
-    GET /responses/text:
-      response:
-        status: 200
-        body:
-          is: 'text'
-
-
-
-  "JSON Response":
-    GET /responses/json:
-      response:
-        status: 200
-        body:
-          is: !!map { json: true }
-
-
-
-  "Regexp body":
-    GET /stream:
-      response:
-        status: 200
-        body:
-          is: !!js/regexp /^Lorem/
-
-
-
-  "Url encoded responses":
-    GET /responses/url-encoded/basic:
-      response:
-        status: 200
-        content-type: application/x-www-form-urlencoded
-        body:
-          is:
-            key: value
-
-
-
-    GET /responses/url-encoded/duplicate:
-      response:
-        status: 200
-        content-type: application/x-www-form-urlencoded
-        body:
-          is:
-            key: [ 1, 2, 3 ]
-
-
-
-    GET /responses/url-encoded/escaped:
-      response:
-        status: 200
-        content-type: application/x-www-form-urlencoded
-        body:
-          is:
-            key: "Hello, world!"
-
-
-
-  "Post tests":
-    POST /post-body/json:
-      request:
-        json: &ref_value_json
-          string: "value"
-          number: 123
-      response:
-        status: 200
-        body:
-          is: *ref_value_json
-
-
-
-    POST /post-body/attach-file:
-      request:
-        attach:
-          - file: 'server/fixtures/lorem.txt'
-      response:
-        status: 200
-        body:
-          is:
-            - file: lorem.txt
-
-
-
-    POST /post-body/attach-file?multiple:
-      request:
-        attach:
-          - file: 'server/fixtures/lorem.txt'
-          - file: 'server/fixtures/lorem.txt'
-          - "file-otherName": 'server/fixtures/lorem.txt'
-      response:
-        status: 200
-        body:
-          is:
-            - file: 'lorem.txt'
-            - file: 'lorem.txt'
-            - "file-otherName": 'lorem.txt'
-
-
-
-    POST /post-body/url:
-      request:
-        urlencoded: &form-data-1
-          - name: 'agustin'
-          - name: 'agustin'
-          - another: 123
-      response:
-        status: 200
-        body:
-          is: *form-data-1
-
-
-
-    POST /post-body/form:
-      request:
-        form: &form-data-2
-          - name: 'agustin'
-          - name: 'agustin'
-          - another: 123string
-      response:
-        status: 200
-        body:
-          print: true
-          is: *form-data-2
-
-
-
-    POST /post-body/form-n-files:
-      request:
-        attach:
-          - file: 'server/fixtures/lorem.txt'
-        form:
-          - name: 'agustin'
-          - name: 'agustin'
-          - another: 123string
-      response:
-        status: 200
-        print: true
-        body:
-          is:
-            - file: "lorem.txt"
-            - name: 'agustin'
-            - name: 'agustin'
-            - another: 123string
-
-
-
-  "Access control by token":
-    GET /secured_by_token#should-be-unauthorized:
-      queryParameters: 
-        accessToken: !!pointer oauth.accessToken
-      response:
-        status: 401
-        
-    GET /secured_by_token/header#should-be-unauthorized:
-      headers: 
-        Authorization: !!pointer oauth.accessToken
-      response:
-        status: 401
-
-
-
-    POST /get_access_token:
-      # responses { new_token: "asd" }
-      response:
-        body:
-          take: # take a value from body
-            new_token: !!pointer oauth.accessToken
-
-
-    GET /secured_by_token:
-      queryParameters: 
-        accessToken: !!pointer oauth.accessToken
-      response:
-        status: 200
-        body:
-          is:
-            success: true
-
-
-    GET /secured_by_token/header:
-      headers: 
-        Authorization: !!pointer oauth.accessToken
-      response:
-        status: 200
-        body:
-          is:
-            success: true
 ```
