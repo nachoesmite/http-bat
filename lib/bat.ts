@@ -608,7 +608,10 @@ export class Bat {
       prom.resolver.call(this, function (ret) {
         /* istanbul ignore if */
         if (ret) {
-          done(ret);
+          if (done.fail)
+            done.fail(ret);
+          else
+            done(ret);
         } else {
           done();
         }
