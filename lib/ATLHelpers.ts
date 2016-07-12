@@ -87,6 +87,29 @@ export class ATLTest {
   }
 }
 
+
+class ATLError extends Error {
+
+}
+
+class ATLAssertion {
+
+
+  constructor(public parent: ATLTest, public assertion: (test: ATLTest, result) => Promise<ATLError>) {
+
+  }
+
+  private _resolve: (error?) => void;
+  private _reject: (error?) => void;
+
+  promise: Promise<any> = new Promise((a, b) => {
+    this._resolve = a;
+    this._reject = b;
+  });
+
+
+}
+
 /// ---
 
 export class KeyValueObject<T> {

@@ -114,18 +114,27 @@ export class Bat {
   }
 
   raw(content: string) {
-    let parsed = jsYaml.load(content, {
-      schema: ATLHelpers.pointerLib.createSchema()
-    });
+    try {
+      let parsed = jsYaml.load(content, {
+        schema: ATLHelpers.pointerLib.createSchema()
+      });
 
-    this.ast.fromObject(parsed);
+      this.ast.fromObject(parsed);
 
-    this.updateState();
+      this.updateState();
 
-    this._loaded();
+      this._loaded();
+    } catch (e) {
+      if (this.options.file)
+        e.message = this.options.file + '\n' + e.message;
+
+      throw e;
+    }
   }
 
-  run(app?) {
+  run(app?): Promise<Bat> {
+    let prom = ATLHelpers.flatPromise();
+
     this.describe(this.file || 'http-bat', () => {
       if (this.ast.options.selfSignedCert) {
         this.it('Allowing self signed server certificates', done => {
@@ -173,7 +182,15 @@ export class Bat {
       }
 
       this.ensureRamlCoverage();
+
+      this.deferedIt('Finalize ATL Document').then(done => {
+        prom.resolver();
+
+        done();
+      });
     });
+
+    return prom.promise;
   }
 
   private ensureRamlCoverage() {

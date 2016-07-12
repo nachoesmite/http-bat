@@ -1,4 +1,4 @@
-# BAT
+#%ATL 1.0
 
 baseUri: http://localhost:4567
 raml: server/fixtures/example.raml

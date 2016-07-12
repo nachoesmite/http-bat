@@ -43,7 +43,7 @@ for (var i in process.argv) {
 }
 
 var mocha = new Mocha({
-  bail: true,
+  bail: false,
   useColors: true
 });
 
@@ -67,14 +67,18 @@ foundFiles.forEach(function (file) {
   mocha.suite.emit('pre-require', global, file, mocha);
 
   mocha.suite.emit('require', (function (file, uri) {
-    var instance = new Bat({
-      baseUri: uri,
-      file: file
+    global.describe('Load ' + file, function () {
+      var instance;
+      it('Load file', function () {
+        instance = new Bat({
+          baseUri: uri,
+          file: file
+        });
+        instances.push(instance);
+        instance.run()
+      });
     });
 
-    instance.run()
-
-    instances.push(instance);
   })(file, uri), file, mocha);
 
   mocha.suite.emit('post-require', global, file, mocha);
