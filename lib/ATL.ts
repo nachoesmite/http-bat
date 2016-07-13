@@ -3,7 +3,7 @@ import util = require('util');
 import ATLHelpers = require('./ATLHelpers');
 import _ = require('lodash');
 import RAML = require('raml-1-parser');
-
+const jsonschema = require('jsonschema');
 import { SuperAgent, SuperAgentRequest, agent } from 'superagent';
 
 import path = require('path');
@@ -180,6 +180,45 @@ export class ATL {
     for (let suiteKey in this.suites) {
       this.replaceSchema(this.suites[suiteKey]);
     }
+  }
+
+  obtainSchemaValidator(schema: any) {
+    let v = new jsonschema.Validator();
+
+    if (typeof schema == "string") {
+      if (schema in this.schemas) {
+        v.addSchema(this.schemas[schema], schema);
+        schema = this.schemas[schema];
+      } else {
+        try {
+          schema = JSON.parse(schema);
+          v.addSchema(schema);
+        } catch (e) {
+
+        }
+      }
+    } else if (typeof schema == "object") {
+      v.addSchema(schema);
+    } else {
+      throw new Error('Invalid schema ' + util.inspect(schema));
+    }
+
+    if (v.unresolvedRefs && v.unresolvedRefs.length) {
+      while (v.unresolvedRefs && v.unresolvedRefs.length) {
+        let nextSchema = v.unresolvedRefs.shift();
+
+        let theSchema = this.schemas[nextSchema];
+
+        if (!theSchema)
+          throw new Error("schema " + nextSchema + " not found");
+
+        v.addSchema(theSchema, nextSchema);
+      }
+    }
+
+    return (content) : { valid: boolean; errors: any[]; } => {
+      return v.validate(content, schema);
+    };
   }
 
   private replaceSchema(suite: ATLHelpers.ATLSuite) {

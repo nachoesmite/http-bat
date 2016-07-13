@@ -11,6 +11,8 @@ var Mocha = require('mocha');
 
 var Bat = require('../lib/bat').Bat;
 
+var httpBatMochaAdapter = require('../lib/adapters/mocha');
+
 var pkg = require('../package.json')
 
 var opts = require('yargs')
@@ -75,6 +77,9 @@ foundFiles.forEach(function (file) {
           file: file
         });
         instances.push(instance);
+
+        httpBatMochaAdapter.registerMochaSuites(instance);
+
         instance.run()
       });
     });

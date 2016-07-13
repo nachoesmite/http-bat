@@ -11,7 +11,6 @@ import request = require('supertest');
 import superAgent = require('superagent');
 import expect = require('expect');
 import RAML = require('raml-1-parser');
-const jsonschema = require('jsonschema');
 const pathMatch = require('raml-path-match');
 import { Request } from 'superagent';
 
@@ -40,9 +39,6 @@ export class Bat {
   private _loadedFailed: Function;
   loaderSemaphore: Promise<any>;
 
-  describe: any = describe;
-  it: any = it;
-
   coverageElements: Coverage.CoverageResource[] = [];
 
   constructor(public options: IBatOptions = {}) {
@@ -68,7 +64,7 @@ export class Bat {
 
     let gotContext = ATLHelpers.flatPromise();
 
-    this.describe('Checking mocha context', function () {
+    describe('Checking mocha context', function () {
       gotContext.resolver(this.ctx);
     });
 
@@ -125,6 +121,15 @@ export class Bat {
       this.updateState();
 
       this._loaded();
+
+      // Parse the raml for coverage
+      if (this.ast.raml) {
+        let resources = this.ast.raml.resources();
+
+        for (let r in resources) {
+          this.peekResource(resources[r]);
+        }
+      }
     } catch (e) {
       if (this.options.file)
         e.message = this.options.file + '\n' + e.message;
@@ -136,14 +141,10 @@ export class Bat {
   run(app?): Promise<Bat> {
     let prom = ATLHelpers.flatPromise();
 
-    this.describe(this.file || 'http-bat', () => {
+    try {
       if (this.ast.options.selfSignedCert) {
-        this.it('Allowing self signed server certificates', done => {
-          process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-          done();
-        });
+        process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
       }
-
 
       if (this.options.baseUri == 'default')
         delete this.options.baseUri;
@@ -162,62 +163,42 @@ export class Bat {
 
       this.ast.agent = request.agent(app);
 
-      // Parse the raml for coverage
-      if (this.ast.raml) {
-        let resources = this.ast.raml.resources();
+      // Run tests
 
-        for (let r in resources) {
-          this.peekResource(resources[r]);
-        }
-      }
+      let tests = this.allTests();
+      let allDone = [];
 
-      // Run suites
-      for (let k in this.ast.suites) {
-        let suite = this.ast.suites[k];
+      tests.forEach(test => {
+        let testResult = test.run();
 
-        this.runSuite(suite);
-      }
+        allDone.push(
+          testResult
+            .then(result => Promise.resolve({
+              response: result,
+              success: true
+            }))
+            .catch(result => Promise.resolve({
+              response: result,
+              success: false
+            }))
+        );
 
-      this.ensureRamlCoverage();
-
-      this.deferedIt('Finalize ATL Document').then(done => {
-        prom.resolver();
-
-        done();
+        testResult.then(res => {
+          this.registerTestResult(test, {
+            req: test.requester.superAgentRequest,
+            res: test.requester.superAgentResponse,
+            test: test,
+            url: test.requester.url
+          });
+        });
       });
-    });
+
+      Promise.all(allDone).then(() => prom.resolver());
+    } catch (e) {
+      prom.rejecter(e);
+    }
 
     return prom.promise;
-  }
-
-  private ensureRamlCoverage() {
-    if (this.ast.raml) {
-      this.describe("RAML Coverage", () => {
-        this.it('Wait the results before start', done => {
-          Promise.all(this.coverageElements.map(item => item.run()))
-            .then(() => done())
-            .catch(err => done(err));
-        });
-
-        if (this.ast.options.raml.coverage) {
-          this.coverageElements.forEach(x => x.injectMochaTests());
-        }
-
-        it('Print coverage', (done) => {
-          Promise.all(this.coverageElements.map(x => x.getCoverage()))
-            .then(x => {
-              let total = x.reduce((prev, actual) => {
-                prev.errored += actual.errored;
-                prev.total += actual.total;
-                prev.notCovered += actual.notCovered;
-                return prev;
-              }, { total: 0, errored: 0, notCovered: 0 });
-              console.log(util.inspect(total, false, 2, true));
-              done();
-            });
-        });
-      });
-    }
   }
 
   private peekResource(resource: RAML.api08.Resource | RAML.api10.Resource, parent?: string) {
@@ -234,7 +215,7 @@ export class Bat {
 
   private registerTestResult(test: ATLHelpers.ATLTest, ctx: {
     req: superAgent.SuperAgentRequest;
-    res: request.Response;
+    res: superAgent.Response;
     test: ATLHelpers.ATLTest;
     url: string;
   }) {
@@ -247,109 +228,23 @@ export class Bat {
     });
   }
 
-  private runSuite(suite: ATLHelpers.ATLSuite): Promise<any> {
-    let execFn = suite.skip ? this.describe.skip : this.describe;
-    let promises = [];
+  allTests(): ATLHelpers.ATLTest[] {
+    let tests = [];
 
-    if (suite.test) {
-      // this.runTest(suite.test);
-      let testResult = suite.test.run();
+    const walk = (suite: ATLHelpers.ATLSuite) => {
+      if (suite.test)
+        tests.push(suite.test);
 
-      promises.push(testResult);
-
-      testResult.then(res => {
-        this.registerTestResult(suite.test, {
-          req: suite.test.requester.superAgentRequest,
-          res: suite.test.requester.superAgentResponse,
-          test: suite.test,
-          url: suite.test.requester.url
-        });
-      });
-
-      generateMochaTest(suite.test);
-    }
-
-    let that = this;
-
-    if (suite.suites && Object.keys(suite.suites).length) {
-      execFn(suite.name, function () {
-        for (let k in suite.suites) {
-          let s = suite.suites[k];
-          promises = promises.concat(that.runSuite(s));
-        }
-      });
-    }
-
-    return Promise.all(promises);
-  }
-
-  obtainSchemaValidator(schema: any) {
-    let v = new jsonschema.Validator();
-
-    if (typeof schema == "string") {
-      if (schema in this.ast.schemas) {
-        v.addSchema(this.ast.schemas[schema], schema);
-        schema = this.ast.schemas[schema];
-      } else {
-        try {
-          schema = JSON.parse(schema);
-          v.addSchema(schema);
-        } catch (e) {
-
-        }
+      if (suite.suites && Object.keys(suite.suites).length) {
+        for (let k in suite.suites)
+          walk(suite.suites[k]);
       }
-    } else if (typeof schema == "object") {
-      v.addSchema(schema);
-    } else {
-      throw new Error('Invalid schema ' + util.inspect(schema));
-    }
-
-    if (v.unresolvedRefs && v.unresolvedRefs.length) {
-      this.describe("Load referenced schemas", function () {
-        while (v.unresolvedRefs && v.unresolvedRefs.length) {
-          let nextSchema = v.unresolvedRefs.shift();
-          this.it("load schema " + nextSchema, () => {
-            let theSchema = this.ast.schemas[nextSchema];
-
-            if (!theSchema)
-              throw new Error("schema " + nextSchema + " not found");
-
-            v.addSchema(theSchema, nextSchema);
-          });
-        }
-      });
-    }
-
-    return (content) => {
-      return v.validate(content, schema);
     };
-  }
 
-  deferedIt(name: string, timeout?: number): Promise<(err?) => void> {
-    let fill = null;
+    for (let suite in this.ast.suites)
+      walk(this.ast.suites[suite]);
 
-    let prom = ATLHelpers.flatPromise();
-
-    this.it(name, function (done) {
-      if (timeout)
-        this.timeout(timeout);
-
-      prom.resolver.call(this, function (ret) {
-        /* istanbul ignore if */
-        if (ret) {
-          if (done.fail)
-            done.fail(ret);
-          else
-            done(ret);
-        } else {
-          done();
-        }
-      });
-
-      prom.promise.catch(done);
-    });
-
-    return prom.promise;
+    return tests;
   }
 
   coverageData: ATLHelpers.IDictionary<{
@@ -388,44 +283,4 @@ export class Bat {
       console.info("Writing coverage information. OK!");
     }
   }
-}
-
-function generateMochaTest(test: ATLHelpers.ATLTest) {
-
-  let execFn = test.skip
-    ? describe.skip
-    : describe;
-
-  execFn(test.description || (test.method.toUpperCase() + ' ' + test.uri), function () {
-    it(test.method.toUpperCase() + ' ' + test.uri, function (done) {
-      test
-        .requester
-        .promise
-        .then(response => {
-          done();
-        })
-        .catch(err => {
-          console.error(util.inspect(err));
-          done(err);
-        });
-    });
-
-
-    test.assertions.forEach(x => {
-      it(x.name, function (done) {
-        x.promise
-          .then(err => {
-            if (err) {
-              console.error(util.inspect(err));
-              done(err);
-            } else
-              done();
-          })
-          .catch(err => {
-            console.error(util.inspect(err));
-            done(err);
-          });
-      });
-    });
-  });
 }

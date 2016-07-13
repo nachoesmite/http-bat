@@ -92,11 +92,6 @@ export class ATLRequest {
 
         for (let h in headers) {
           req.set(h, headers[h] == undefined ? '' : headers[h].toString());
-          //            if (typeof this.test.request.headers[h] == "object" && test.request.headers[h] instanceof ATLHelpers.pointerLib.Pointer && test.request.headers[h].path.indexOf("ENV") == 0) {
-          //              requestHolder.ctx.REQUEST.headers[h] = "(TAKEN FROM " + test.request.headers[h].path + ")";
-          //            } else {
-          //              requestHolder.ctx.REQUEST.headers[h] = typeof headers[h] != "undefined" && headers[h].toString() || headers[h];
-          //            }
         }
       }
 

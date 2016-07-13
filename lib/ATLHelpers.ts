@@ -65,7 +65,7 @@ export class ATLTest {
   uri: string;
   uriParameters: IDictionary<any>;
 
-  timeout = 3000;
+  timeout = 30000;
 
   response: IATLTestRes = {};
   request: IATLTestReq = {};
@@ -674,23 +674,9 @@ function generateTestAssertions(test: ATLTest) {
       }
 
       if (test.response.body.schema) {
-        /*let v = that.obtainSchemaValidator(test.response.body.schema);
-
-        that.deferedIt("response.body schema", test.timeout).then(resolver => {
-          let validationResult = v(requestHolder.res.body);
-          try {
-            if (validationResult.valid) {
-              resolver();
-            } else {
-              let errors = ["Schema error:"];
-              validationResult.errors && validationResult.errors.forEach(x => errors.push("  " + x.stack));
-
-              resolver(ATLHelpers.error(errors.join('\n') || "Invalid schema", requestHolder.ctx));
-            }
-          } catch (e) {
-            resolver(e);
-          }
-        });*/
+        test.assertions.push(
+          new CommonAssertions.ValidateSchemaOperation(test, test.response.body.schema)
+        );
       }
 
       if (test.response.body.matches) {

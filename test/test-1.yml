@@ -13,7 +13,7 @@ stores:
 options:
   selfSignedCert: true
   raml:
-    coverage: false
+    coverage: true
 
 tests:
   "Test 404 error":

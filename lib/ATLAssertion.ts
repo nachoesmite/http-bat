@@ -20,6 +20,8 @@ export abstract class ATLAssertion {
   promise: Promise<ATLError>;
   name: string;
 
+  skip: boolean = false;
+
   constructor(public parent: ATLTest) {
     this.promise = Promise.reject(null);
   }
@@ -167,7 +169,7 @@ export namespace CommonAssertions {
   export class CopyBodyValueOperation extends ATLResponseAssertion {
     constructor(parent: ATLTest, public key: string, public value: Pointer) {
       super(parent);
-      this.name = "response.body::" + key + " >> " + value.path;
+      this.name = "response.body::" + key + " >> !variables " + value.path;
     }
 
     validate(response: Response) {
@@ -176,6 +178,27 @@ export namespace CommonAssertions {
       } else {
         let takenValue = _.get(response.body, this.key);
         this.value.set(this.parent.suite.ATL.options.variables, takenValue);
+      }
+    }
+  }
+
+  export class ValidateSchemaOperation extends ATLResponseAssertion {
+    constructor(parent: ATLTest, public schema: string) {
+      super(parent);
+      this.name = "response.body schema " + schema;
+    }
+
+    validate(response: Response) {
+      let v = this.parent.suite.ATL.obtainSchemaValidator(this.schema);
+
+      let validationResult = v(response.body);
+
+      if (!validationResult.valid) {
+        let errors = ["Schema error:"];
+
+        validationResult.errors && validationResult.errors.forEach(x => errors.push("  " + x.stack));
+
+        this.error({ message: errors.join('\n') });
       }
     }
   }

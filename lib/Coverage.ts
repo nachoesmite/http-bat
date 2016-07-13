@@ -329,11 +329,12 @@ export class CoverageResource {
               if (!responses.length) {
                 throw new Error("status code " + statusCode + " not covered");
               } else {
-                return Promise.race(responses.map(x => x.test.promise))
-                  .then(x => {
-                    if (x.status != statusCode)
-                      throw ATLHelpers.errorDiff('unexpected response.status', statusCode, x.status, x);
-                  });
+                return Promise.race(
+                  responses.map(x => x.test.requester.promise)
+                ).then(x => {
+                  if (x.status != statusCode)
+                    throw ATLHelpers.errorDiff('unexpected response.status', statusCode, x.status, x);
+                });
               }
             }, response.statusAST)
           );
@@ -368,7 +369,7 @@ export class CoverageResource {
             );
 
             if (actualBody.schemaString) {
-              let v = this.bat.obtainSchemaValidator(actualBody.schemaString);
+              let v = this.bat.ast.obtainSchemaValidator(actualBody.schemaString);
 
               bodyAsserion.innerAssertions.push(
                 new CoverageAssertion('response.body schema', (results) => {
@@ -379,14 +380,15 @@ export class CoverageResource {
                     &&
                     (x.response.get('content-type') || '').toLowerCase().indexOf(contentType.toLowerCase()) == 0
                   );
-                  return Promise.race(responses.map(x => x.test.promise))
-                    .then((response: request.Response) => {
-                      let validationResult = v(response.body);
+                  return Promise.race(
+                    responses.map(x => x.test.requester.promise)
+                  ).then((response: request.Response) => {
+                    let validationResult = v(response.body);
 
-                      if (!validationResult.valid) {
-                        throw ATLHelpers.error((validationResult.errors && validationResult.errors.map(x => "  " + x.stack)).join('\n') || "Invalid schema", response);
-                      }
-                    });
+                    if (!validationResult.valid) {
+                      throw ATLHelpers.error((validationResult.errors && validationResult.errors.map(x => "  " + x.stack)).join('\n') || "Invalid schema", response);
+                    }
+                  });
                 }, actualBody.schema.highLevel().lowLevel())
               );
             }
@@ -409,8 +411,8 @@ export class CoverageResource {
                   );
 
                   return Promise.race(
-                    responses.map(x => x.test.promise))
-                    .then(
+                    responses.map(x => x.test.requester.promise)
+                  ).then(
                     (response: request.Response) => {
                       let receivedHeaders = Object.keys(response.header).map(x => x.toLowerCase());
 
@@ -508,27 +510,6 @@ export class CoverageResource {
     this.resourceAssertion.promise.promise.then(calculateCoverage).catch(calculateCoverage);
 
     return prom.promise;
-  }
-
-  injectMochaTests() {
-    const walk = (assertion: CoverageAssertion, level: number) => {
-      if (assertion.validationFn) {
-        it(assertion.name, function (done) {
-          const that = this;
-          assertion.promise.promise
-            .then(() => done())
-            .catch(done);
-        });
-      }
-      if (assertion.innerAssertions.length) {
-        describe(assertion.name, function () {
-          this.bail(false);
-          assertion.innerAssertions.forEach(x => walk(x, level + 1));
-        });
-      }
-    };
-
-    walk(this.resourceAssertion, 0);
   }
 
   run() {
