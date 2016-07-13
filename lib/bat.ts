@@ -8,6 +8,7 @@ import util = require('util');
 import jsYaml = require('js-yaml');
 import _ = require('lodash');
 import request = require('supertest');
+import superAgent = require('superagent');
 import expect = require('expect');
 import RAML = require('raml-1-parser');
 const jsonschema = require('jsonschema');
@@ -18,7 +19,7 @@ import ATL = require('./ATL');
 import ATLHelpers = require('./ATLHelpers');
 import Coverage = require('./Coverage');
 import { generateString as coverageToString } from '../lib/RAMLCoverageReporter';
-
+import { ATLError, ATLSkipped, CommonAssertions } from './ATLAssertion';
 
 
 export interface IBatOptions {
@@ -33,8 +34,6 @@ export class Bat {
   file: string;
 
   ast: ATL.ATL;
-
-  agent: request.SuperTest;
 
   private _loaded: Function;
   private _loadedFailed: Function;
@@ -119,6 +118,7 @@ export class Bat {
         schema: ATLHelpers.pointerLib.createSchema()
       });
 
+      this.ast.options.path = this.path;
       this.ast.fromObject(parsed);
 
       this.updateState();
@@ -143,27 +143,23 @@ export class Bat {
         });
       }
 
-      this.it('Ensure baseUri', done => {
-        if (this.options.baseUri == 'default')
-          delete this.options.baseUri;
 
-        if (!app || app === "default" || app === '') {
-          app = this.options.baseUri || this.ast.options.baseUri;
-        }
+      if (this.options.baseUri == 'default')
+        delete this.options.baseUri;
 
-        if (!app) {
-          done(new Error("baseUri not specified"));
-          return;
-        }
+      if (!app || app === "default" || app === '') {
+        app = this.options.baseUri || this.ast.options.baseUri;
+      }
 
-        if (typeof app === 'string' && app.substr(-1) === '/') {
-          app = app.substr(0, app.length - 1);
-        }
+      if (!app) {
+        throw new Error("baseUri not specified");
+      }
 
-        this.agent = request.agent(app);
+      if (typeof app === 'string' && app.substr(-1) === '/') {
+        app = app.substr(0, app.length - 1);
+      }
 
-        done();
-      });
+      this.ast.agent = request.agent(app);
 
       // Parse the raml for coverage
       if (this.ast.raml) {
@@ -251,11 +247,15 @@ export class Bat {
   }
 
 
-  private runSuite(suite: ATLHelpers.ATLSuite) {
+  private runSuite(suite: ATLHelpers.ATLSuite): Promise<any> {
     let execFn = suite.skip ? this.describe.skip : this.describe;
+    let promises = [];
 
     if (suite.test) {
-      this.runTest(suite.test);
+      // this.runTest(suite.test);
+      promises.push(suite.test.run());
+
+      generateMochaTest(suite.test);
     }
 
     let that = this;
@@ -264,10 +264,12 @@ export class Bat {
       execFn(suite.name, function () {
         for (let k in suite.suites) {
           let s = suite.suites[k];
-          that.runSuite(s);
+          promises = promises.concat(that.runSuite(s));
         }
       });
     }
+
+    return Promise.all(promises);
   }
 
   obtainSchemaValidator(schema: any) {
@@ -387,7 +389,7 @@ export class Bat {
 
       that.deferedIt(test.method.toUpperCase() + ' ' + requestHolder.url, test.timeout).then(function (resolver) {
         try {
-          let req = requestHolder.req = that.agent[test.method.toLowerCase()](requestHolder.url);
+          let req = requestHolder.req = that.ast.agent[test.method.toLowerCase()](requestHolder.url);
 
           requestHolder.ctx.REQUEST.method = test.method;
           requestHolder.ctx.REQUEST.url = requestHolder.url;
@@ -678,3 +680,42 @@ export class Bat {
   }
 }
 
+function generateMochaTest(test: ATLHelpers.ATLTest) {
+
+  let execFn = test.skip
+    ? describe.skip
+    : describe;
+
+  execFn(test.description || (test.method.toUpperCase() + ' ' + test.uri), function () {
+    it(test.method.toUpperCase() + ' ' + test.uri, function (done) {
+      test
+        .requester
+        .promise
+        .then(response => {
+          done();
+        })
+        .catch(err => {
+          console.error(util.inspect(err));
+          done(err);
+        });
+    });
+
+
+    test.assertions.forEach(x => {
+      it(x.name, function (done) {
+        x.promise
+          .then(err => {
+            if (err) {
+              console.error(util.inspect(err));
+              done(err);
+            } else
+              done();
+          })
+          .catch(err => {
+            console.error(util.inspect(err));
+            done(err);
+          });
+      });
+    });
+  });
+}

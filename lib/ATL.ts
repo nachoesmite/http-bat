@@ -4,6 +4,8 @@ import ATLHelpers = require('./ATLHelpers');
 import _ = require('lodash');
 import RAML = require('raml-1-parser');
 
+import { SuperAgent, SuperAgentRequest, agent } from 'superagent';
+
 import path = require('path');
 
 if (typeof Promise != 'function')
@@ -35,6 +37,8 @@ export class ATL {
       traits: true
     }
   };
+
+  agent: SuperAgent<SuperAgentRequest>;
 
   raml: RAML.api08.Api | RAML.api10.Api;
 

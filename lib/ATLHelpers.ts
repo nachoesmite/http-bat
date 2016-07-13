@@ -5,11 +5,15 @@ import methods = require('methods');
 import { ATL } from './ATL';
 import PointerLib = require('./Pointer');
 
+import { ATLError, ATLResponseAssertion, CommonAssertions } from './ATLAssertion';
+import { ATLRequest } from './ATLRequest';
 export const pointerLib = PointerLib;
 
 export interface IDictionary<T> {
   [key: string]: T;
 }
+
+const log = console.log.bind(console);
 
 /// ---
 
@@ -22,12 +26,13 @@ export class ATLSuite {
   descriptor: any = null;
   test: ATLTest = null;
   skip: boolean = false;
+  ATL: ATL;
 }
 
 /// ---
 
 export interface IATLTestRes {
-  status?: number | string;
+  status?: number;
   body?: {
     is?: any;
     matches?: KeyValueObject<KeyValueObject<any>>[];
@@ -50,6 +55,8 @@ export interface IATLTestReq {
 }
 
 export class ATLTest {
+  suite: ATLSuite;
+
   description: string;
   testId: string;
 
@@ -85,29 +92,38 @@ export class ATLTest {
       this._resolve(result);
     }
   }
-}
 
+  requester: ATLRequest = new ATLRequest(this);
+  assertions: ATLResponseAssertion[] = [];
 
-class ATLError extends Error {
+  run(): Promise<void> {
 
-}
+    let dependencies = this.dependsOn.length ? Promise.all(this.dependsOn.map(x => x.test.promise)) : Promise.resolve();
 
-class ATLAssertion {
+    dependencies
+      .then(() => this.requester.run())
+      .catch(() => {
+        this.requester.dependencyFailed();
+      });
 
+    let assertionResults = Promise.all(this.assertions.map(x => x.promise));
 
-  constructor(public parent: ATLTest, public assertion: (test: ATLTest, result) => Promise<ATLError>) {
+    assertionResults
+      .then(assertionResults => {
+        let errors = assertionResults.filter(x => !!x);
 
+        if (errors.length) {
+          this._reject(errors);
+        } else {
+          this._resolve();
+        }
+      })
+      .catch(errors => {
+        this._reject(errors);
+      });
+
+    return this.promise;
   }
-
-  private _resolve: (error?) => void;
-  private _reject: (error?) => void;
-
-  promise: Promise<any> = new Promise((a, b) => {
-    this._resolve = a;
-    this._reject = b;
-  });
-
-
 }
 
 /// ---
@@ -123,6 +139,8 @@ export class KeyValueObject<T> {
 export function parseSuites(object, instance: ATL): ATLSuite {
 
   let suite = new ATLSuite("");
+
+  suite.ATL = instance;
 
   let ret: IDictionary<ATLSuite> = suite.suites = {};
 
@@ -149,7 +167,7 @@ export function parseSuites(object, instance: ATL): ATLSuite {
           };
 
           try {
-            subSuite.test = parseTest(subSuite.descriptor, warn);
+            subSuite.test = parseTest(subSuite.descriptor, warn, suite);
           } catch (e) {
             throw new Error((method.method.toUpperCase() + ' ' + method.url) + ", " + e);
           }
@@ -170,8 +188,9 @@ export function parseSuites(object, instance: ATL): ATLSuite {
   return suite;
 }
 
-export function parseTest(body, warn: (warn) => void): ATLTest {
+export function parseTest(body, warn: (warn) => void, suite: ATLSuite): ATLTest {
   let test = new ATLTest;
+  test.suite = suite;
 
   // parse uriParameters
   if ('uriParameters' in body) {
@@ -259,13 +278,13 @@ export function parseTest(body, warn: (warn) => void): ATLTest {
     test.skip = !!body.skip;
   }
 
-
   if ('response' in body) {
     parseResponse(test, body.response, warn);
-
   } else {
     test.response.status = 200;
   }
+
+  generateTestAssertions(test);
 
   return test;
 }
@@ -644,3 +663,76 @@ export function error(msg, ctx) {
 
 if (!(error('test', {}) instanceof Error)) process.exit(1);
 if (!(errorDiff('test', 1, 2, {}) instanceof Error)) process.exit(1);
+
+
+function generateTestAssertions(test: ATLTest) {
+  if (test.skip) return;
+
+  if (test.response) {
+    if (test.response.status) {
+      test.assertions.push(
+        new CommonAssertions.StatusCodeAssertion(test, test.response.status)
+      );
+    }
+
+    if (test.response.body) {
+      if ('is' in test.response.body) {
+        test.assertions.push(
+          new CommonAssertions.BodyEqualsAssertion(test, test.response.body.is)
+        );
+      }
+
+      if (test.response.body.schema) {
+        /*let v = that.obtainSchemaValidator(test.response.body.schema);
+
+        that.deferedIt("response.body schema", test.timeout).then(resolver => {
+          let validationResult = v(requestHolder.res.body);
+          try {
+            if (validationResult.valid) {
+              resolver();
+            } else {
+              let errors = ["Schema error:"];
+              validationResult.errors && validationResult.errors.forEach(x => errors.push("  " + x.stack));
+
+              resolver(ATLHelpers.error(errors.join('\n') || "Invalid schema", requestHolder.ctx));
+            }
+          } catch (e) {
+            resolver(e);
+          }
+        });*/
+      }
+
+      if (test.response.body.matches) {
+        test.response.body.matches.forEach(kvo => {
+          test.assertions.push(
+            new CommonAssertions.BodyMatchesAssertion(test, kvo.key, kvo.value)
+          );
+        });
+      }
+
+      if (test.response.headers) {
+        for (let h in test.response.headers) {
+          test.assertions.push(
+            new CommonAssertions.HeaderMatchesAssertion(test, h, test.response.headers[h])
+          );
+        }
+      }
+
+      if (test.response.body.take) {
+        let take = test.response.body.take;
+
+        take.forEach(function (takenElement) {
+          test.assertions.push(
+            new CommonAssertions.CopyBodyValueOperation(test, takenElement.key, takenElement.value)
+          );
+        });
+      }
+
+      if (test.response.body.copyTo && test.response.body.copyTo instanceof pointerLib.Pointer) {
+        test.assertions.push(
+          new CommonAssertions.CopyBodyValueOperation(test, '*', test.response.body.copyTo)
+        );
+      }
+    }
+  }
+}

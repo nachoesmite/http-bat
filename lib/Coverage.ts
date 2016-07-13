@@ -315,7 +315,7 @@ export class CoverageResource {
             throw new NotImplementedError("no matching requests found");
         }));
       } else {
-        Object.keys(flatResponses).forEach(statusCode => {
+        Object.keys(flatResponses).map(x => parseInt(x)).forEach(statusCode => {
           let response = flatResponses[statusCode];
 
           methodAssetions.innerAssertions.push(
@@ -331,7 +331,7 @@ export class CoverageResource {
               } else {
                 return Promise.race(responses.map(x => x.test.promise))
                   .then(x => {
-                    if (x.status != parseInt(statusCode))
+                    if (x.status != statusCode)
                       throw ATLHelpers.errorDiff('unexpected response.status', statusCode, x.status, x);
                   });
               }
@@ -340,7 +340,7 @@ export class CoverageResource {
 
           let allBodies = Object.keys(response.bodies);
 
-          let responseAssertion = new CoverageAssertion(statusCode);
+          let responseAssertion = new CoverageAssertion(statusCode.toString());
 
           methodAssetions.innerAssertions.push(responseAssertion);
 
