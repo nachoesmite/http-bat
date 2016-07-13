@@ -84,15 +84,6 @@ export class ATLTest {
     this._reject = b;
   });
 
-  resolve(result, error?: Error) {
-    this.result = result;
-    if (error) {
-      this._reject(error);
-    } else {
-      this._resolve(result);
-    }
-  }
-
   requester: ATLRequest = new ATLRequest(this);
   assertions: ATLResponseAssertion[] = [];
 

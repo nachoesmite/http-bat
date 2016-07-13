@@ -143,21 +143,6 @@ export class ATLRequest {
       }
 
       return this.flatPromise.resolver(res);
-
-      // resolver(err);
-
-      /*if (!err) {
-        that.registerTestResult(test, {
-          req,
-          res,
-          test,
-          url: requestHolder.url
-        });
-      }*/
-
-
-
-      // test.resolve(res, err);
     });
   }
 

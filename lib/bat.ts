@@ -13,6 +13,7 @@ import expect = require('expect');
 import RAML = require('raml-1-parser');
 const jsonschema = require('jsonschema');
 const pathMatch = require('raml-path-match');
+import { Request } from 'superagent';
 
 // Locals
 import ATL = require('./ATL');
@@ -232,7 +233,7 @@ export class Bat {
   }
 
   private registerTestResult(test: ATLHelpers.ATLTest, ctx: {
-    req: request.Test;
+    req: superAgent.SuperAgentRequest;
     res: request.Response;
     test: ATLHelpers.ATLTest;
     url: string;
@@ -246,14 +247,24 @@ export class Bat {
     });
   }
 
-
   private runSuite(suite: ATLHelpers.ATLSuite): Promise<any> {
     let execFn = suite.skip ? this.describe.skip : this.describe;
     let promises = [];
 
     if (suite.test) {
       // this.runTest(suite.test);
-      promises.push(suite.test.run());
+      let testResult = suite.test.run();
+
+      promises.push(testResult);
+
+      testResult.then(res => {
+        this.registerTestResult(suite.test, {
+          req: suite.test.requester.superAgentRequest,
+          res: suite.test.requester.superAgentResponse,
+          test: suite.test,
+          url: suite.test.requester.url
+        });
+      });
 
       generateMochaTest(suite.test);
     }
@@ -312,307 +323,6 @@ export class Bat {
     return (content) => {
       return v.validate(content, schema);
     };
-  }
-
-  private runTest(test: ATLHelpers.ATLTest) {
-    let execFn = test.skip
-      ? this.describe.skip
-      : this.describe;
-
-    let that = this;
-
-    let requestHolder = {
-      req: null as request.Test,
-      res: null as request.Response,
-      url: test.uri,
-      ctx: {
-        REQUEST: {} as any,
-        RESPONSE: {} as any
-      }
-    };
-
-    execFn(test.description || (test.method.toUpperCase() + ' ' + test.uri), function () {
-
-      if (test.uriParameters) {
-        that.deferedIt('Ensure uriParameters').then(function (resolver) {
-          for (let i in test.uriParameters) {
-            let value = null;
-
-            if (test.uriParameters[i] instanceof ATLHelpers.pointerLib.Pointer) {
-              value = test.uriParameters[i].get(that.ast.options.variables);
-            } else {
-              value = test.uriParameters[i];
-            }
-
-            let typeOfValue = typeof value;
-
-            /* istanbul ignore if */
-            if (typeOfValue != 'string' && typeOfValue != 'number') {
-              resolver("Only strings and numbers are allowed on uriParameters. " + i + "=" + util.inspect(value));
-              return;
-            }
-
-            requestHolder.url = requestHolder.url.replace(new RegExp("{" + i + "}", "g"), function (fulltext, match) {
-              return encodeURIComponent(value);
-            });
-          }
-          resolver();
-        });
-      }
-
-
-
-      let parsedUrl = url.parse(requestHolder.url, true);
-
-      parsedUrl.query = parsedUrl.query || {};
-
-      let newQs = parsedUrl.query;
-
-      if (test.request.queryParameters) {
-        that.deferedIt('Ensure queryParameters').then(function (resolver) {
-          if ('search' in parsedUrl)
-            delete parsedUrl.search;
-
-          let qsParams = ATLHelpers.cloneObjectUsingPointers(test.request.queryParameters, that.ast.options.variables);
-
-          for (let i in qsParams) {
-            newQs[i] = qsParams[i];
-          }
-
-          requestHolder.ctx.REQUEST.queryParameters = qsParams;
-
-          requestHolder.url = url.format(parsedUrl);
-
-          resolver();
-        });
-      }
-
-      that.deferedIt(test.method.toUpperCase() + ' ' + requestHolder.url, test.timeout).then(function (resolver) {
-        try {
-          let req = requestHolder.req = that.ast.agent[test.method.toLowerCase()](requestHolder.url);
-
-          requestHolder.ctx.REQUEST.method = test.method;
-          requestHolder.ctx.REQUEST.url = requestHolder.url;
-
-          // we must send some data..
-          if (test.request) {
-            if (test.request.headers) {
-              requestHolder.ctx.REQUEST.headers = {};
-              let headers = ATLHelpers.cloneObjectUsingPointers(test.request.headers, that.ast.options.variables);
-              for (let h in headers) {
-
-                req.set(h, headers[h] == undefined ? '' : headers[h].toString());
-                if (typeof test.request.headers[h] == "object" && test.request.headers[h] instanceof ATLHelpers.pointerLib.Pointer && test.request.headers[h].path.indexOf("ENV") == 0) {
-                  requestHolder.ctx.REQUEST.headers[h] = "(TAKEN FROM " + test.request.headers[h].path + ")";
-                } else {
-                  requestHolder.ctx.REQUEST.headers[h] = typeof headers[h] != "undefined" && headers[h].toString() || headers[h];
-                }
-              }
-            }
-
-            if (test.request.json) {
-              let data = ATLHelpers.cloneObjectUsingPointers(test.request.json, that.ast.options.variables);
-              requestHolder.ctx.REQUEST.body = data;
-              req.send(data);
-            }
-
-            if (test.request.attach) {
-              /* istanbul ignore if */
-              if (!that.path) {
-                resolver(ATLHelpers.error("attach is not allowed using RAW definitions", requestHolder.ctx));
-                return;
-              }
-
-              for (let i in test.request.attach) {
-                let currentAttachment = test.request.attach[i];
-                try {
-                  req.attach(currentAttachment.key, path.resolve(that.path, currentAttachment.value));
-                } catch (e) {
-                  resolver(e);
-                  return;
-                }
-              }
-            }
-
-            if (test.request.form) {
-              req.type('form');
-
-              for (let i in test.request.form) {
-                let currentAttachment = ATLHelpers.cloneObjectUsingPointers(test.request.form[i], that.ast.options.variables);
-                req.field(currentAttachment.key, currentAttachment.value);
-              }
-            }
-
-            if (test.request.urlencoded) {
-              req.send(ATLHelpers.cloneObjectUsingPointers(test.request.urlencoded, that.ast.options.variables));
-            }
-          }
-
-          req.end(function (err, res) {
-            requestHolder.res = res;
-            requestHolder.ctx.RESPONSE = res;
-            /* istanbul ignore if: untestable */
-            if (err && err instanceof Error) {
-              err = ATLHelpers.error(err.message, requestHolder.ctx);
-            }
-
-            resolver(err);
-
-            if (!err) {
-              that.registerTestResult(test, {
-                req,
-                res,
-                test,
-                url: requestHolder.url
-              });
-            }
-
-            test.resolve(res, err);
-          });
-        } catch (e) {
-          resolver(e);
-        }
-      });
-
-
-      execFn("Validate response", function () {
-        if (test.response) {
-          if (test.response.status) {
-            that.deferedIt("response.status == " + test.response.status, test.timeout).then(resolver => {
-              /* istanbul ignore else */
-              if (requestHolder.res.status == test.response.status)
-                resolver();
-              else
-                resolver(ATLHelpers.error('expected status code ' + test.response.status + ' got ' + requestHolder.res.status, requestHolder.ctx));
-            });
-          }
-
-          if (test.response.body) {
-            if ('is' in test.response.body) {
-              that.deferedIt("response.body", test.timeout).then(resolver => {
-                let bodyEquals = ATLHelpers.cloneObjectUsingPointers(test.response.body.is, that.ast.options.variables);
-
-                try {
-                  if (test.response.body.is && typeof test.response.body.is == "object" && test.response.body.is instanceof RegExp) {
-                    /* istanbul ignore if */
-                    if (!test.response.body.is.test(requestHolder.res.text)) {
-                      let a = util.inspect(bodyEquals);
-                      let b = util.inspect(test.response.body.is);
-                      resolver(ATLHelpers.error('expected response.body to match ' + a + ' response body, got ' + b, requestHolder.ctx));
-                    } else {
-                      resolver();
-                    }
-                  } else {
-                    let takenBody;
-                    if (typeof test.response.body.is == "string") {
-                      takenBody = requestHolder.res.text;
-                    } else {
-                      takenBody = requestHolder.res.body;
-                    }
-
-                    /* istanbul ignore if */
-                    if (!_.isEqual(bodyEquals, takenBody)) {
-                      let a = util.inspect(bodyEquals);
-                      let b = util.inspect(takenBody);
-                      resolver(ATLHelpers.errorDiff('expected ' + a + ' response body, got ' + b, bodyEquals, takenBody, requestHolder.ctx));
-                    } else {
-                      resolver();
-                    }
-                  }
-                } catch (e) {
-                  resolver(e);
-                }
-              });
-            }
-
-            if (test.response.body.schema) {
-              let v = that.obtainSchemaValidator(test.response.body.schema);
-
-              that.deferedIt("response.body schema", test.timeout).then(resolver => {
-                let validationResult = v(requestHolder.res.body);
-                try {
-                  if (validationResult.valid) {
-                    resolver();
-                  } else {
-                    let errors = ["Schema error:"];
-                    validationResult.errors && validationResult.errors.forEach(x => errors.push("  " + x.stack));
-
-                    resolver(ATLHelpers.error(errors.join('\n') || "Invalid schema", requestHolder.ctx));
-                  }
-                } catch (e) {
-                  resolver(e);
-                }
-              });
-            }
-
-            if (test.response.body.matches) {
-              test.response.body.matches.forEach(kvo => {
-                that.deferedIt("response.body::" + kvo.key, test.timeout).then(resolver => {
-                  let value: any = ATLHelpers.cloneObjectUsingPointers(kvo.value, that.ast.options.variables);
-
-                  let readed = _.get(requestHolder.res.body, kvo.key);
-
-                  /* istanbul ignore if */
-                  if (
-                    (!(value instanceof RegExp) && !_.isEqual(readed, value))
-                    ||
-                    ((value instanceof RegExp) && !value.test(readed))
-                  ) {
-                    resolver(ATLHelpers.errorDiff('expected response.body::' + kvo.key + ' to be ' + util.inspect(value) + ' got ' + util.inspect(readed), value, readed, requestHolder.ctx));
-                  } else {
-                    resolver();
-                  }
-                });
-              });
-
-            }
-
-            if (test.response.body.take) {
-              let take = test.response.body.take;
-
-              take.forEach(function (takenElement) {
-                that.deferedIt("response.body::" + takenElement.key + " >> !!variables " + takenElement.value.path, test.timeout).then(resolver => {
-                  let takenValue = _.get(requestHolder.res.body, takenElement.key);
-                  takenElement.value.set(that.ast.options.variables, takenValue);
-                  resolver();
-                });
-              });
-            }
-
-            if (test.response.body.copyTo && test.response.body.copyTo instanceof ATLHelpers.pointerLib.Pointer) {
-              that.deferedIt("response.body >> !!variables " + test.response.body.copyTo.path, test.timeout).then(resolver => {
-                test.response.body.copyTo.set(that.ast.options.variables, requestHolder.res.body);
-                resolver();
-              });
-            }
-
-            if (test.response.headers) {
-              let headers = ATLHelpers.cloneObjectUsingPointers(test.response.headers, that.options.variables);
-
-              for (let h in headers) {
-                if (h !== 'content-type') {
-                  headers[h] = headers[h].toString();
-
-                  that.deferedIt("response.header::" + h, test.timeout).then(resolve => {
-                    let value = requestHolder.res.get(h.toLowerCase());
-
-                    /* istanbul ignore if */
-                    if (headers[h] != value) {
-                      let a = util.inspect(headers[h]);
-                      let b = util.inspect(value);
-                      resolve(ATLHelpers.errorDiff('expected response.header::' + h + ' to be ' + a + ' got ' + b, headers[h], value, requestHolder.ctx));
-                    } else {
-                      resolve();
-                    }
-                  });
-                }
-              }
-            }
-          }
-        }
-      });
-    });
-
   }
 
   deferedIt(name: string, timeout?: number): Promise<(err?) => void> {
