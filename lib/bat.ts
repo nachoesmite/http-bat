@@ -5,7 +5,7 @@ import url = require('url');
 import util = require('util');
 
 // NPM
-import jsYaml = require('js-yaml');
+// import jsYaml = require('js-yaml');
 import _ = require('lodash');
 import request = require('supertest');
 import superAgent = require('superagent');
@@ -14,13 +14,14 @@ import RAML = require('raml-1-parser');
 const pathMatch = require('raml-path-match');
 import { Request } from 'superagent';
 
+
 // Locals
 import ATL = require('./ATL');
 import ATLHelpers = require('./ATLHelpers');
 import Coverage = require('./Coverage');
 import { generateString as coverageToString } from '../lib/RAMLCoverageReporter';
 import { ATLError, ATLSkipped, CommonAssertions } from './ATLAssertion';
-
+import YAML = require('./YAML');
 
 export interface IBatOptions {
   baseUri?: string;
@@ -111,9 +112,9 @@ export class Bat {
 
   raw(content: string) {
     try {
-      let parsed = jsYaml.load(content, {
-        schema: ATLHelpers.pointerLib.createSchema()
-      });
+      let parsed = YAML.load(content);
+
+      console.log(util.inspect(parsed, false, 5, true));
 
       this.ast.options.path = this.path;
       this.ast.fromObject(parsed);

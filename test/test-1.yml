@@ -1,5 +1,5 @@
 #%ATL 1.0
-
+asd: !!variable first_user.id
 baseUri: http://localhost:4567
 raml: server/fixtures/example.raml
 

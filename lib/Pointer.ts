@@ -1,18 +1,15 @@
-'use strict';
-
-const yaml = require('js-yaml');
+// NPM
+import Type = require('yaml-ast-parser/dist/type');
+import { YAMLMapping } from 'yaml-ast-parser';
 import _ = require('lodash');
 
-export const type = new yaml.Type('tag:yaml.org,2002:variable', {
+
+export const type = new Type('tag:yaml.org,2002:variable', {
   kind: 'scalar',
   resolve: resolvePointer,
   construct: constructVariable,
   instanceOf: Pointer
 });
-
-export function createSchema() {
-  return yaml.Schema.create([module.exports.type]);
-}
 
 export class Pointer {
   constructor(public path: string) {
@@ -31,10 +28,10 @@ export class Pointer {
 // ---
 
 function constructVariable(data) {
-  return new Pointer(data);
+  return new Pointer(data.value);
 }
 
 
-function resolvePointer(data) {
-  return (typeof data === 'string');
+function resolvePointer(data: YAMLMapping) {
+  return (typeof data.value === 'string');
 }
