@@ -294,8 +294,6 @@ tests:
           matches:
             - "[0].id": !!js/regexp ([0-9]+)
 
-
-
     GET /users/{id}:
       description: Get an user by ID
       uriParameters:
@@ -306,8 +304,6 @@ tests:
           matches:
             - id: !!variable second_user.id
             - name: !!variable second_user.name
-
-
 
     GET /users#FirstUserThisTime:
       response:
@@ -327,6 +323,20 @@ tests:
             - name: !!variable first_user.name
 
   "Testing RAML urls":
+    GET /a/1/b/2:
+      response:
+        status: 404
+
+    GET /defaults/headers:
+      response:
+        status: 200
+
+    GET /bounce/parameter/{variable}:
+      uriParameters:
+        variable: 123
+      response:
+        status: 200
+
     GET /parameters/prefix/one123:
       response:
         status: 200
@@ -338,6 +348,15 @@ tests:
         status: 200
 
     GET /parameters/prefix/three123123asda123:
+      response:
+        status: 200
+
+
+    GET /parameters/single/1:
+      response:
+        status: 200
+
+    GET /extensions/static.json:
       response:
         status: 200
 
@@ -354,6 +373,12 @@ tests:
         status: 200
 
     GET /extensions/media-type/enum-period.json:
+      response:
+        status: 200
+
+
+
+    GET /extensions/media-type/basic.json:
       response:
         status: 200
 

@@ -124,7 +124,7 @@ export class Bat {
 
       // Parse the raml for coverage
       if (this.ast.raml) {
-        let resources = this.ast.raml.resources();
+        let resources = this.ast.raml.expand().resources();
 
         for (let r in resources) {
           this.peekResource(resources[r]);

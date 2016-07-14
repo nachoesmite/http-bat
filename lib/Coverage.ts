@@ -31,6 +31,8 @@ export class CoverageAssertion {
   error: Error;
   valid: boolean = null;
   innerAssertions: CoverageAssertion[] = [];
+
+  /// Resolves when the validation is OK
   promise = ATLHelpers.flatPromise();
 
   src_file: string;
@@ -160,22 +162,11 @@ export class CoverageResource {
 
     this.resourceAssertion = new CoverageAssertion(this.resource.completeRelativeUri());
 
-
     let methods = [];
 
     let type = this.resource.type();
 
     methods = methods.concat(this.resource.methods());
-
-    if (methods.length == 0) {
-      if (type) {
-        let resourceType = type.resourceType();
-
-        if (resourceType) {
-          methods = methods.concat(resourceType.methods());
-        }
-      }
-    }
 
     // console.log(util.inspect(this.resource.toJSON(), false, 10, true));
 
